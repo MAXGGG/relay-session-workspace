@@ -1,0 +1,14 @@
+node_modules/
+.pnpm-store/
+.relay/
+test-artifacts/
+*.log
+.tooling/
+playwright-report/
+test-results/
+coverage/
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db

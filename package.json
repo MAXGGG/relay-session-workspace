@@ -1,0 +1,40 @@
+{
+  "name": "relay-session-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "A local attention queue and terminal workspace for Claude Code sessions.",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server/main.ts",
+    "dev": "node --watch src/server/main.ts",
+    "check": "tsc --noEmit && node --check public/app.js && biome check .",
+    "format": "biome check --write .",
+    "test": "node --test test/unit/*.test.ts test/integration/*.test.ts",
+    "test:unit": "node --test test/unit/*.test.ts",
+    "test:integration": "node --test test/integration/*.test.ts",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=src/core/*.ts --test-coverage-lines=90 --test-coverage-branches=85 --test-coverage-functions=90 test/unit/*.test.ts",
+    "test:e2e": "playwright test",
+    "setup:browser": "node scripts/install-browser.mjs",
+    "verify": "npm run check && npm test && npm run test:coverage && npm run test:e2e"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
+    "node-pty": "1.2.0-beta.18",
+    "ws": "8.22.1"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.5",
+    "@playwright/test": "^1.65.0",
+    "@types/node": "^24.19.2",
+    "@types/ws": "^8.18.2",
+    "typescript": "^7.0.2"
+  },
+  "allowScripts": {
+    "node-pty@1.2.0-beta.18": true
+  }
+}
