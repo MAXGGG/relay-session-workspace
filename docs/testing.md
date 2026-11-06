@@ -11,7 +11,7 @@ Use Node 24+ and `npm ci`. Install Chromium once with `npm run setup:browser` (a
 
 Run `npm run verify` before submitting a change. Coverage gates apply to core decision logic (90% lines/functions, 85% branches); coverage is not a claim that every integration is proven. Browser failures retain traces/screenshots. Tests use temporary directories and do not spend model tokens. GitHub Actions runs checks, tests, coverage and browser acceptance on Windows and Ubuntu.
 
-The initial Windows validation passed 12 unit tests, 10 integration tests and 5 browser tests, with 100% core line/function coverage and 98.88% branch coverage. This includes actual terminal input/output and concurrent shutdown of twelve shells. Linux CI and real Claude acceptance are configured/documented, but have not been executed in this development environment.
+The initial validation passed 12 unit tests, 10 integration tests and 5 browser tests, with 100% core line/function coverage and 98.88% branch coverage. This includes actual terminal input/output and concurrent shutdown of twelve shells. The [first GitHub Actions run](https://github.com/MAXGGG/relay-session-workspace/actions/runs/42300200534) passed on Windows and Ubuntu. Real Claude acceptance and macOS validation remain outstanding.
 
 When fixing a bug, first reproduce its observable failure with a test. Avoid sleeps and broad mocks; await real events and inject time only into the domain model. Keep demo fixtures visibly simulated. Add a test scenario when a new coordinator action or lifecycle state is introduced.
 

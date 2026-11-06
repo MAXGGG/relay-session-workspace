@@ -41,7 +41,7 @@ claude auth status --text
 
 If Claude is not signed in, run `claude auth login` and complete its normal sign-in. Relay uses the Claude installation and account of its launching OS user. It has no separate API-key field; real Claude work follows your existing Claude billing arrangement. See the [official CLI reference](https://code.claude.com/docs/en/cli-reference).
 
-**Validation status:** automated checks have passed on Windows; Ubuntu CI is configured, and macOS has not been validated in this project yet. Real Claude behavior requires the [manual acceptance check](docs/testing.md#manual-claude-acceptance).
+**Validation status:** the automated suite has passed on both Windows and Ubuntu in [GitHub Actions](https://github.com/MAXGGG/relay-session-workspace/actions/runs/42300200534). macOS has not been validated in this project yet. Real Claude behavior still requires the [manual acceptance check](docs/testing.md#manual-claude-acceptance).
 
 ## 2. Clone and install
 
