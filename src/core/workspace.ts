@@ -43,7 +43,8 @@ export class Workspace {
   ): Session {
     if (!input.name.trim() || input.name.length > 100)
       throw new Error("Use a session name of 1–100 characters.");
-    if (!["demo", "shell", "claude"].includes(input.mode)) throw new Error("Unknown session mode.");
+    if (!["demo", "shell", "claude", "codex", "custom"].includes(input.mode))
+      throw new Error("Unknown session mode.");
     const priority = validPriority(input.priority ?? 2);
     const session: Session = {
       id: `session-${randomUUID().slice(0, 8)}`,
@@ -71,7 +72,7 @@ export class Workspace {
         entry.sessionId === sessionId &&
         entry.status !== "resolved" &&
         entry.kind === input.kind &&
-        entry.title === input.title &&
+        (input.requestKey ? entry.requestKey === input.requestKey : entry.title === input.title) &&
         entry.source === input.source,
     );
     if (existing) return existing;
@@ -152,6 +153,105 @@ export class Workspace {
     }
   }
 
+  updateSession(
+    id: string,
+    changes: Partial<
+      Pick<
+        Session,
+        | "name"
+        | "notes"
+        | "conversationId"
+        | "executable"
+        | "args"
+        | "resumeArgs"
+        | "attentionMode"
+        | "quietSeconds"
+      >
+    >,
+  ): void {
+    const session = this.session(id);
+    if (changes.name !== undefined && (!changes.name.trim() || changes.name.length > 100))
+      throw new Error("Use a session name of 1–100 characters.");
+    if (changes.notes !== undefined && changes.notes.length > 20000)
+      throw new Error("Notes are too long.");
+    if (
+      changes.attentionMode !== undefined &&
+      !["events", "quiet", "manual"].includes(changes.attentionMode)
+    )
+      throw new Error("Choose events, quiet, or manual attention.");
+    if (
+      changes.quietSeconds !== undefined &&
+      (!Number.isInteger(changes.quietSeconds) ||
+        changes.quietSeconds < 3 ||
+        changes.quietSeconds > 3600)
+    )
+      throw new Error("Quiet interval must be 3–3600 seconds.");
+    Object.assign(session, changes);
+    if (changes.name !== undefined) session.name = changes.name.trim();
+  }
+
+  archive(id: string): void {
+    const session = this.session(id);
+    if (session.status !== "stopped" && session.status !== "error")
+      throw new Error("Stop this session before archiving it.");
+    if (this.state.items.some((item) => item.sessionId === id && item.status !== "resolved"))
+      throw new Error("Handle this session's pending and deferred items before archiving it.");
+    session.archivedAt = this.now();
+    if (this.state.selectedSessionId === id) {
+      this.state.selectedSessionId =
+        this.state.sessions.find((entry) => entry.archivedAt === undefined)?.id ?? null;
+      this.state.selectedItemId = null;
+    }
+  }
+
+  restore(id: string): void {
+    delete this.session(id).archivedAt;
+    this.selectSession(id);
+  }
+
+  retirement(days: number): void {
+    if (!Number.isInteger(days) || days < 0 || days > 365)
+      throw new Error("Retirement must be 0 (off) or 1–365 days.");
+    this.state.settings = { retireAfterDays: days };
+  }
+
+  retireInactive(): boolean {
+    const days = this.state.settings?.retireAfterDays ?? 0;
+    if (!days) return false;
+    let changed = false;
+    for (const session of this.state.sessions) {
+      if (
+        session.archivedAt === undefined &&
+        session.status === "stopped" &&
+        this.now() - session.lastActivityAt >= days * 86400000 &&
+        !this.state.items.some(
+          (item) => item.sessionId === session.id && item.status !== "resolved",
+        )
+      ) {
+        this.archive(session.id);
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  reopen(id: string): void {
+    const item = this.item(id);
+    delete this.session(item.sessionId).archivedAt;
+    item.status = "pending";
+    item.priority = this.session(item.sessionId).priority;
+    delete item.resolvedAt;
+    delete item.snoozedUntil;
+  }
+
+  classify(id: string, kind: AttentionItem["kind"]): void {
+    if (!["question", "approval", "review", "error", "activity"].includes(kind))
+      throw new Error("Unknown attention kind.");
+    const item = this.item(id);
+    item.kind = kind;
+    item.confidence = "manual";
+  }
+
   recordEvent(id: string): boolean {
     if (this.state.processedEvents.includes(id)) return false;
     this.state.processedEvents.push(id);
@@ -167,6 +267,9 @@ export class Workspace {
   recover(): void {
     for (const session of this.state.sessions) {
       if (session.mode !== "demo") session.status = "stopped";
+    }
+    for (const delivery of this.state.deliveries ?? []) {
+      if (delivery.status === "pending") delivery.status = "uncertain";
     }
     this.wake();
   }

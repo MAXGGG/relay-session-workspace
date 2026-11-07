@@ -31,7 +31,11 @@ try {
       "Content-Type": "application/json",
       Authorization: `Bearer ${process.env.RELAY_TOKEN}`,
     },
-    body: JSON.stringify({ relaySessionId: process.env.RELAY_SESSION_ID, event }),
+    body: JSON.stringify({
+      relaySessionId: process.env.RELAY_SESSION_ID,
+      runId: process.env.RELAY_RUN_ID,
+      event,
+    }),
     signal: AbortSignal.timeout(1800),
   });
 } catch {

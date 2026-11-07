@@ -14,11 +14,13 @@ Read PROJECT.md for product boundaries, docs/architecture.md for ownership, and 
 - `src/core`: session and attention state, event classification, coordinator commands. No filesystem, HTTP or PTY imports.
 - `src/server`: local transport, persistence, process ownership. Validate all external input here.
 - `public`: browser UI and xterm rendering; it never owns priority rules.
-- `scripts`: Claude hook bridge and explicitly simulated worker.
+- `scripts`: event bridges, explicitly simulated worker, and opt-in live CLI checks.
 - Tests use temp state directories and ephemeral ports. Never read the user's actual Claude history in automated tests.
 
 ## Product invariants
 Stable IDs determine every routing target. Viewing never resolves attention. Priorities are user-controlled; oldest first breaks ties. The coordinator does not answer workers or approve actions. Unsupported or ambiguous requests must not silently choose a session. Simulated sessions are labeled. Closed terminals remain resumable records, not supposedly live processes.
+
+Explicit user replies require a fixed session and process run ID, durable delivery receipts, and visible target review. Terminal silence is only a suggestion. Terminal device queries are answered by the server; replay in a browser must never produce duplicate protocol input. Never include live paid model smoke checks in default CI.
 
 ## Development
 Preserve pending work on failures and restarts. Keep hooks local to launched sessions; never rewrite global Claude settings. Keep root instructions concise and update docs when behavior changes. Test state transitions and externally observable behavior, not private implementation details. Add regression coverage for fixed bugs. Inspect the UI after changing layout.

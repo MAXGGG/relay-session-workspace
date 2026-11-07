@@ -36,6 +36,13 @@ function findSession(workspace: Workspace, query: string): Session {
 }
 
 function execute(workspace: Workspace, input: string): string {
+  const reply = /^reply to (.+?):\s*([\s\S]+)$/i.exec(input);
+  if (reply) {
+    const session = findSession(workspace, reply[1]);
+    workspace.state.replyDraft = { id: randomUUID(), sessionId: session.id, text: reply[2] };
+    workspace.selectSession(session.id);
+    return `Reply drafted for ${session.name} (${session.id}). Review the target and text, then select Send to terminal. Nothing has been sent yet.`;
+  }
   if (/^(next(?: task)?|what(?:'s| is) next\??)$/i.test(input)) {
     const item = workspace.next();
     if (!item)
@@ -90,5 +97,7 @@ function execute(workspace: Workspace, input: string): string {
           .join("\n")
       : "No pending items. Your queue is clear.";
   }
-  return "I can navigate and organize: “next task”, “open payments”, “open task-…”, “make payments P1”, “defer 30”, “reviewed”, or “status”. This prototype uses commands; it does not answer workers or execute chat text as shell commands.";
+  return "I can navigate and organize: “next task”, “open payments”, “open task-…”, “make payments P1”, “defer 30”, “reviewed”, “status”, or “reply to payments: your message”. Reply commands prepare a draft for your review. Relay does not answer workers or execute coordinator text as shell commands.";
 }
+
+import { randomUUID } from "node:crypto";

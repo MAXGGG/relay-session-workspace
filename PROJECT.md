@@ -1,18 +1,27 @@
-# Relay prototype
+# Relay
 
-Relay helps one person handle many independent Claude Code sessions. It presents a priority-ordered attention queue and opens each item's original terminal. The coordinator navigates and organizes; it does not answer workers or authorize their work.
+Relay helps one person handle many independent CLI sessions: Claude, Codex, shells, and custom agents. It presents a priority-ordered attention inbox and opens each item's original terminal. The coordinator navigates, organizes, and prepares replies for explicit sending; it does not make decisions or approve work for the user.
 
-## P1 acceptance
-- Four areas: sessions, attention queue, coordinator conversation, original terminal.
-- Separate questions, review results, and errors; one session can produce several attention items.
+## Working release acceptance
+
+- Four areas: sessions, attention queue, coordinator, original terminal.
+- Separate questions, approvals, review results, errors, and uncertain activity suggestions. One session can produce several items.
 - User priority first, then oldest first. Opening an item never resolves it.
-- Next, open, defer, review/done, and change-priority commands have visible, deterministic effects.
-- Persist sessions and queue across app restarts; restart does not imply a live process survived.
-- Real terminals for locally launched sessions; clearly labeled simulated sessions for evaluation without Claude installed.
-- Claude CLI hooks emit events without modifying global Claude settings or auto-answering approvals.
+- Next, open, defer, review/done, and priority commands have visible, deterministic effects.
+- Any installed interactive CLI can run through an executable/argument profile. Agent integration is optional.
+- Explicit reply routing binds to a session ID and current process instance. Retrying the same delivery does not duplicate it.
+- Search, editing, notes, archive/restore, retained terminal output, and configured conversation resume survive server restarts.
+- Browser closure keeps processes running. Server restart restores stopped records and pending work, not live process handles.
+- The server handles terminal device responses. Browser replay cannot inject old responses into worker input.
+- Claude hooks stay local to managed sessions and never modify global Claude settings or auto-answer approvals.
+- Automated verification uses real PTYs and browser flows without paid AI calls. Live agent acceptance is opt-in.
 
-## P2 (later)
-Before retiring an inactive session, extract reusable learnings and propose edits to CLAUDE.md or skills. Support review and auto-apply modes, project scope, deduplication, source evidence, and reversible changes. A session-ending hook is not a reliable place to wait for extraction. This prototype does not claim to implement P2.
+See [release acceptance](docs/release-plan.md) for development cycles and evidence.
+
+## P2: knowledge before retirement
+
+Future extraction should propose reusable project facts or skills with provenance, deduplication, scoped diffs, review/auto-apply policy, and rollback. Temporary task status belongs in task records. Extraction should finish before retiring a live session; a process-ending hook cannot reliably run a long model job. Version 0.2 retains notes and transcripts but does not implement automatic knowledge extraction.
 
 ## Current assumptions
-Claude Code runs on the user's other computer. This prototype can be developed here; actual Claude integration must also be tested on that computer. The initial coordinator uses a documented command vocabulary, not an always-running LLM. Run the app on the machine hosting its terminal processes.
+
+Run Relay on the machine hosting its terminal processes. The local release is tested with Codex CLI on Windows; Windows and Ubuntu CI cover deterministic behavior. Real Claude and macOS acceptance remain separate. Terminal silence is only an attention suggestion. The coordinator uses a documented vocabulary; an LLM is optional future work.

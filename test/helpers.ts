@@ -13,6 +13,13 @@ export function removeTemporary(directory: string): void {
     throw new Error("Refusing cleanup outside the test directory.");
   rmSync(resolved, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
+export async function waitUntil(predicate: () => boolean, timeout = 10000): Promise<void> {
+  const start = Date.now();
+  while (!predicate()) {
+    if (Date.now() - start > timeout) throw new Error("Timed out waiting for observable state.");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+}
 export async function testApp(demo = true) {
   const directory = temporaryDirectory();
   const app = await createApp({ stateDir: directory, demo });

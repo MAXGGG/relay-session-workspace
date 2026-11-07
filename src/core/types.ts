@@ -1,7 +1,7 @@
 export type Priority = 1 | 2 | 3;
-export type SessionMode = "demo" | "shell" | "claude";
+export type SessionMode = "demo" | "shell" | "claude" | "codex" | "custom";
 export type SessionStatus = "idle" | "working" | "waiting" | "stopped" | "error";
-export type ItemKind = "question" | "review" | "error";
+export type ItemKind = "question" | "approval" | "review" | "error" | "activity";
 
 export interface Session {
   id: string;
@@ -15,6 +15,13 @@ export interface Session {
   lastActivityAt: number;
   claudeId?: string;
   executable?: string;
+  args?: string[];
+  resumeArgs?: string[];
+  conversationId?: string;
+  notes?: string;
+  archivedAt?: number;
+  attentionMode?: "events" | "quiet" | "manual";
+  quietSeconds?: number;
   demoScenario?: "question" | "review" | "working";
 }
 
@@ -48,6 +55,25 @@ export interface WorkspaceState {
   selectedSessionId: string | null;
   selectedItemId: string | null;
   processedEvents: string[];
+  deliveries?: Delivery[];
+  settings?: { retireAfterDays: number };
+  replyDraft?: { id: string; sessionId: string; text: string };
+}
+
+export interface Delivery {
+  id: string;
+  sessionId: string;
+  runId: string;
+  text: string;
+  status: "pending" | "sent" | "uncertain" | "failed";
+  at: number;
+}
+
+export interface SessionEvent {
+  eventId: string;
+  type: "working" | "question" | "approval" | "review" | "error" | "idle";
+  text?: string;
+  conversationId?: string;
 }
 
 export interface WorkerEvent {

@@ -60,3 +60,14 @@ test("ambiguous, unsupported, missing, and invalid requests cannot silently rout
   assert.throws(() => coordinate(w, "x".repeat(2001)), /Enter a command/);
   assert.equal(w.state.messages.at(-1)?.role, "assistant");
 });
+
+test("reply commands only prepare an explicit target draft and refuse ambiguity", () => {
+  const w = new Workspace();
+  seedDemo(w, ".");
+  assert.match(coordinate(w, "reply to Payments API: Use option B"), /Nothing has been sent/);
+  assert.equal(w.state.replyDraft?.sessionId, "session-payments");
+  assert.equal(w.state.replyDraft?.text, "Use option B");
+  const draftId = w.state.replyDraft?.id;
+  assert.match(coordinate(w, "reply to missing: yes"), /No session/);
+  assert.equal(w.state.replyDraft?.id, draftId);
+});

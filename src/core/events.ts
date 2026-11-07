@@ -3,11 +3,14 @@ import type { Workspace } from "./workspace.ts";
 
 export function ingestEvent(workspace: Workspace, sessionId: string, event: WorkerEvent): void {
   const session = workspace.session(sessionId);
-  if (event.eventId && !workspace.recordEvent(event.eventId)) return;
-  if (event.session_id) session.claudeId = event.session_id;
+  if (event.eventId && !workspace.recordEvent(`${sessionId}:${event.eventId}`)) return;
+  if (event.session_id) {
+    session.claudeId = event.session_id;
+    session.conversationId = event.session_id;
+  }
   const text = (event.last_assistant_message ?? event.message ?? "").trim().slice(0, 20000);
   const add = (
-    kind: "question" | "review" | "error",
+    kind: "question" | "approval" | "review" | "error",
     detail: string,
     source: string,
     requestKey?: string,
@@ -54,7 +57,7 @@ export function ingestEvent(workspace: Workspace, sessionId: string, event: Work
     case "PermissionRequest":
       session.status = "waiting";
       add(
-        "question",
+        "approval",
         text ||
           `Permission requested for ${event.tool_name ?? "a tool"}. Open the terminal to decide.`,
         "permission",
@@ -78,7 +81,7 @@ export function ingestEvent(workspace: Workspace, sessionId: string, event: Work
           )
         ) {
           add(
-            "question",
+            "approval",
             text || "Permission requested. Open the terminal to decide.",
             "permission",
           );

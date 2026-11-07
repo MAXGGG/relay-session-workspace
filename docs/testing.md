@@ -4,16 +4,27 @@ Use Node 24+ and `npm ci`. Install Chromium once with `npm run setup:browser` (a
 
 | Layer | What it proves |
 | --- | --- |
-| Unit | Priority/age ordering, selection without resolution, snooze/wake, target ambiguity, event deduplication, question vs result handling, invalid input. |
-| Integration | Atomic state round trips, real HTTP/WebSocket authentication, event ingestion, restart semantics, real PTY input/output and cleanup. |
-| Browser | Four-panel flow, next/open commands selecting the correct terminal, review/defer/priority controls, create session, refresh persistence. |
+| Unit | Priority/age ordering, selection without resolution, snooze/wake, ambiguity, reply drafts, per-session event deduplication, uncertainty, archive/retirement, and recovery. |
+| Integration | Snapshot/backup validation, workspace ownership, real HTTP/WebSocket/PTY routing, explicit delivery/retry/stale-target rejection, profiles and literal Windows shim arguments, retained terminal output, and twelve concurrent worker replies. |
+| Browser | Empty onboarding, custom CLI, task notes, rename/search, next/open, reviewed reply targets, classification/reopen, archive/restore, settings, reconnect, and desktop/mobile layouts. |
+| Live Codex (opt-in) | Actual installed Codex starts in a PTY, answers an initial prompt and a reply sent through Relay, survives browser reload, and reaches the generic attention queue. |
 | Manual Claude | On a machine with Claude installed: start/authenticate a session, ask a question, observe hooks, answer it, review a result, stop and resume. Separate from unattended CI. |
 
 Run `npm run verify` before submitting a change. Coverage gates apply to core decision logic (90% lines/functions, 85% branches); coverage is not a claim that every integration is proven. Browser failures retain traces/screenshots. Tests use temporary directories and do not spend model tokens. GitHub Actions runs checks, tests, coverage and browser acceptance on Windows and Ubuntu.
 
-The initial validation passed 12 unit tests, 10 integration tests and 5 browser tests, with 100% core line/function coverage and 98.88% branch coverage. This includes actual terminal input/output and concurrent shutdown of twelve shells. The [first GitHub Actions run](https://github.com/MAXGGG/relay-session-workspace/actions/runs/42300200534) passed on Windows and Ubuntu. Real Claude acceptance and macOS validation remain outstanding.
+Version 0.2 local validation on Windows passes 17 unit tests, 19 integration tests, and 10 browser tests. Domain coverage is 100% lines, 98.48% branches, and 98.25% functions. The Windows-specific shim test is skipped on Linux. Coverage percentages do not measure agent correctness or prove every CLI's behavior.
+
+Live acceptance was also executed on Windows with Node 24.22.1 and `codex-cli 0.167.0-alpha.3.2`: actual model responses, explicit follow-up submission, browser reconnect to the same process, and a quiet-output attention item passed. Claude and macOS live validation remain outstanding. CI evidence for the release is recorded in [the release plan](release-plan.md).
 
 When fixing a bug, first reproduce its observable failure with a test. Avoid sleeps and broad mocks; await real events and inject time only into the domain model. Keep demo fixtures visibly simulated. Add a test scenario when a new coordinator action or lifecycle state is introduced.
+
+## Run the live Codex check
+
+After authenticating the installed CLI and trusting the Relay repository, run `npm run smoke:codex`. The optional `-- --trust-project` argument explicitly accepts the initial repository trust prompt for this test. It makes two small model requests under a read-only sandbox and asks for no tool use. It never runs in `verify` or CI. Review `test-artifacts/codex-live.png` and `.log` if it fails; these artifacts are ignored by Git.
+
+Live testing caught two bugs that mock sessions did not: replayed terminal color queries polluted agent input, and submitting Enter in the same burst as bracketed paste left a Codex message in its composer. Terminal queries now have one server-side owner; Claude/Codex paste and submission are separate and check the run ID again before Enter.
+
+The browser routing regression changes the selected session while a reply dialog is open and asserts that only the originally named worker receives the text. Replaying/reloading after a completed draft must not reopen that already-sent draft. Twelve-PTY integration verifies that each worker receives exactly its own reply.
 
 ## Manual Claude acceptance
 
