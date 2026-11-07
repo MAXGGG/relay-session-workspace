@@ -24,8 +24,9 @@ The release is a local attention inbox for independently running CLI sessions. T
 - Cycle 1 complete: generic launch/resume profiles, metadata, and lifecycle policy; literal-argument and archive regression tests pass.
 - Cycle 2 complete: generic events, per-session deduplication, explicit approvals, quiet suggestions, classification/reopen, and manual attention; domain and real-worker integration tests pass.
 - Cycle 3 complete: reviewed reply routing, persistent receipts, stale-run rejection, terminal replay, exclusive workspace ownership, and browser reconnect. Browser tests caught and drove fixes for replayed device responses; live Codex testing drove separate paste/Enter submission.
-- Cycle 4 complete locally: empty onboarding, session editing/search/notes, archive/restore, optional retirement, notifications, updated setup/recovery docs, desktop/mobile visual inspection, and twelve-worker stress acceptance.
-- Local full verification: 17 unit + 20 integration + 10 browser tests; domain line coverage 100%, branch coverage 98.48%, function coverage 98.25%.
+- Cycles 4–5 complete: empty onboarding, session editing/search/notes, archive/restore, optional retirement, notifications, updated setup/recovery docs, desktop/mobile visual inspection, and twelve-worker stress acceptance.
+- Local full verification passes: 17 unit + 20 integration + 10 browser tests; domain line coverage 100%, branch coverage 98.48%, function coverage 98.25%.
 - Live Codex acceptance: actual initial response and UI-submitted follow-up, browser reload, and generic attention passed with Node 24.22.1 / Codex 0.167.0-alpha.3.2 on Windows.
 - CI caught a Linux shell remaining alive after its stop signal. Added bounded Unix termination, a worker that ignores SIGHUP, and five repetitions of twelve-shell teardown.
-- Remaining release gate: verify final Windows/Ubuntu CI. Real Claude and macOS checks are explicitly outside the verified platform claims for this release.
+- Release gate passed: [Windows and Ubuntu CI](https://github.com/MAXGGG/relay-session-workspace/actions/runs/42328588043) passed for implementation commit `f253e2a`, including repeated concurrent teardown and the stubborn worker. Windows runs all 47 tests; Ubuntu runs 46 with the Windows-only shim test skipped. No paid inference runs in CI.
+- Version 0.2 is published on GitHub and ready for local use. Real Claude and macOS checks remain outside the verified platform claims, and P2 knowledge extraction remains separate.
