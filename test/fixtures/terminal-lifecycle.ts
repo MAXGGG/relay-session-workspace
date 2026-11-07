@@ -11,6 +11,7 @@ let remaining = count;
 const originalExit = app.terminals.onExit;
 app.terminals.onExit = (id, code) => {
   originalExit(id, code);
+  console.log(`EXIT ${id}: ${code}`);
   if (--remaining === 0) finished.resolve();
 };
 const readyIds = new Set<string>();
@@ -19,6 +20,7 @@ app.terminals.onData = (id, _data) => {
   const ready = process.platform === "win32" ? output.includes(">") : /[$#] /.test(output);
   if (!ready || readyIds.has(id)) return;
   readyIds.add(id);
+  console.log(`READY ${id}`);
   if (readyIds.size !== count) return;
   for (const readyId of readyIds) {
     app.terminals.resize(readyId, 110, 30);
@@ -37,6 +39,22 @@ for (let index = 0; index < count; index++) {
   });
   app.terminals.start(session);
 }
+const diagnostic = setTimeout(() => {
+  console.log(
+    "LIFECYCLE_PENDING",
+    JSON.stringify({
+      remaining,
+      ready: readyIds.size,
+      records: [...app.terminals.records].map(([id, record]) => ({
+        id,
+        stopping: record.stopping,
+        output: record.output.slice(-500),
+      })),
+    }),
+  );
+}, 15000);
+diagnostic.unref();
 await finished.promise;
+clearTimeout(diagnostic);
 await app.cleanup();
 console.log("LIFECYCLE_COMPLETE");
