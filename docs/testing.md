@@ -12,7 +12,7 @@ Use Node 24+ and `npm ci`. Install Chromium once with `npm run setup:browser` (a
 
 Run `npm run verify` before submitting a change. Coverage gates apply to core decision logic (90% lines/functions, 85% branches); coverage is not a claim that every integration is proven. Browser failures retain traces/screenshots. Tests use temporary directories and do not spend model tokens. GitHub Actions runs checks, tests, coverage and browser acceptance on Windows and Ubuntu.
 
-Version 0.2 local validation on Windows passes 17 unit tests, 19 integration tests, and 10 browser tests. Domain coverage is 100% lines, 98.48% branches, and 98.25% functions. The Windows-specific shim test is skipped on Linux. Coverage percentages do not measure agent correctness or prove every CLI's behavior.
+Version 0.2 validation includes 17 unit tests, 20 integration tests, and 10 browser tests. Domain coverage is 100% lines, 98.48% branches, and 98.25% functions. The Windows-specific shim test is skipped on Linux. Coverage percentages do not measure agent correctness or prove every CLI's behavior.
 
 Live acceptance was also executed on Windows with Node 24.22.1 and `codex-cli 0.167.0-alpha.3.2`: actual model responses, explicit follow-up submission, browser reconnect to the same process, and a quiet-output attention item passed. Claude and macOS live validation remain outstanding. CI evidence for the release is recorded in [the release plan](release-plan.md).
 
@@ -25,6 +25,8 @@ After authenticating the installed CLI and trusting the Relay repository, run `n
 Live testing caught two bugs that mock sessions did not: replayed terminal color queries polluted agent input, and submitting Enter in the same burst as bracketed paste left a Codex message in its composer. Terminal queries now have one server-side owner; Claude/Codex paste and submission are separate and check the run ID again before Enter.
 
 The browser routing regression changes the selected session while a reply dialog is open and asserts that only the originally named worker receives the text. Replaying/reloading after a completed draft must not reopen that already-sent draft. Twelve-PTY integration verifies that each worker receives exactly its own reply.
+
+Ubuntu CI reproduced a shell remaining alive after SIGHUP during concurrent resize/stop. Stop now escalates after two seconds. Lifecycle coverage repeats twelve-shell teardown across five independent hosts and verifies termination of a worker that deliberately ignores SIGHUP, with diagnostic output if a host hangs.
 
 ## Manual Claude acceptance
 

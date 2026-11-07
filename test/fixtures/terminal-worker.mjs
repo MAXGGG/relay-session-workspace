@@ -2,6 +2,9 @@
 import { randomUUID } from "node:crypto";
 import readline from "node:readline";
 
+if (process.argv.includes("--ignore-hangup")) {
+  process.on("SIGHUP", () => console.log("HANGUP_IGNORED"));
+}
 console.log(`ARGS:${JSON.stringify(process.argv.slice(2))}`);
 console.log("WORKER_READY");
 const lines = readline.createInterface({ input: process.stdin, terminal: false });

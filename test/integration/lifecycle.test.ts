@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { promisify } from "node:util";
 import { projectRoot } from "../../src/server/app.ts";
 
-for (const mode of ["natural", "stopped", "concurrent"]) {
+for (const mode of ["natural", "stopped", "concurrent", "stubborn"]) {
   test(`a ${mode} terminal releases resources so its host can exit naturally`, async () => {
     // Teardown races need several independent hosts, not just one successful run.
     const attempts = mode === "concurrent" ? 5 : 1;

@@ -13,6 +13,7 @@ interface TerminalRecord {
   runId: string;
   screen: InstanceType<typeof headless.Terminal>;
   replyPending?: boolean;
+  stopTimer?: ReturnType<typeof setTimeout>;
 }
 export class Terminals {
   records = new Map<string, TerminalRecord>();
@@ -72,7 +73,7 @@ export class Terminals {
     });
     const finished = Promise.withResolvers<void>();
     const screen = new headless.Terminal({ cols: 100, rows: 24, scrollback: 1000 });
-    const record = {
+    const record: TerminalRecord = {
       process: child,
       output: "",
       finished: finished.promise,
@@ -92,6 +93,7 @@ export class Terminals {
       this.onData(session.id, data);
     });
     child.onExit(({ exitCode }) => {
+      clearTimeout(record.stopTimer);
       screen.dispose();
       releaseWindowsPty(child);
       this.records.delete(session.id);
@@ -131,6 +133,14 @@ export class Terminals {
     if (!record || record.stopping) return;
     record.stopping = true;
     record.process.kill();
+    // Unix PTYs initially send SIGHUP. A shell handling resize or an agent with
+    // a signal handler can survive it; an explicit Stop must still terminate.
+    if (process.platform !== "win32") {
+      record.stopTimer = setTimeout(() => {
+        if (this.records.get(id) === record) record.process.kill("SIGKILL");
+      }, 2000);
+      record.stopTimer.unref();
+    }
   }
   async dispose(): Promise<void> {
     this.closing = true;
