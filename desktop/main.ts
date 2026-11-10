@@ -7,7 +7,7 @@ import { saveWindowPreferences, startBackend, stopBackend, windowPreferences } f
 import { importWorkspace } from "./import-workspace.ts";
 
 app.setName("Zyi");
-app.setAppUserModelId("io.github.maxggg.zyi");
+if (process.platform === "win32") app.setAppUserModelId("io.github.maxggg.zyi");
 if (process.env.ZYI_USER_DATA_DIR)
   app.setPath("userData", path.resolve(process.env.ZYI_USER_DATA_DIR));
 const root = fileURLToPath(new URL("../", import.meta.url));

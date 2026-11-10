@@ -20,17 +20,25 @@ test("desktop: bundled terminal, isolated window, background lifecycle, durable 
         ? path.resolve(path.dirname(original), "../..")
         : path.dirname(original);
     const copy = path.join(directory, path.basename(source));
-    cpSync(source, copy, { recursive: true });
+    cpSync(source, copy, { recursive: true, verbatimSymlinks: true });
     packagedExecutable = path.join(copy, path.relative(source, original));
   }
-  const launch = () =>
-    electron.launch({
+  let diagnostics = "";
+  const launch = async () => {
+    const instance = await electron.launch({
       ...(packagedExecutable
         ? { executablePath: packagedExecutable, args: [] }
         : { args: [path.join(projectRoot, "build/desktop-app")] }),
       env: { ...process.env, ZYI_USER_DATA_DIR: directory, ZYI_DESKTOP_TEST: "1" },
       timeout: 30000,
     });
+    const collect = (chunk: Buffer) => {
+      diagnostics = (diagnostics + chunk.toString()).slice(-16000);
+    };
+    instance.process().stderr?.on("data", collect);
+    instance.process().stdout?.on("data", collect);
+    return instance;
+  };
   let desktop: Awaited<ReturnType<typeof launch>> | undefined;
   try {
     desktop = await launch();
@@ -155,6 +163,9 @@ test("desktop: bundled terminal, isolated window, background lifecycle, durable 
     const recovered = await request("/api/state");
     assert.equal(Object.keys(recovered.terminals).length, 0);
     assert.equal(recovered.state.sessions[0].id, id);
+  } catch (error) {
+    if (diagnostics) console.error(diagnostics);
+    throw error;
   } finally {
     await desktop?.close();
     removeTemporary(directory);

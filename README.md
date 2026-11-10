@@ -134,9 +134,9 @@ Claude hooks identify explicit permission and question-tool events. Classificati
 Every managed process inherits `RELAY_SESSION_ID`, `RELAY_RUN_ID`, `RELAY_EVENT_URL`, and `RELAY_TOKEN`. Integrate a CLI's hooks or a task script with:
 
 ```sh
-node /absolute/path/to/relay/scripts/relay-event.mjs working
-node /absolute/path/to/relay/scripts/relay-event.mjs question "Which region should I use?"
-node /absolute/path/to/relay/scripts/relay-event.mjs review "Implementation is ready for review."
+node /absolute/path/to/zyi/scripts/relay-event.mjs working
+node /absolute/path/to/zyi/scripts/relay-event.mjs question "Which region should I use?"
+node /absolute/path/to/zyi/scripts/relay-event.mjs review "Implementation is ready for review."
 ```
 
 Supported events: `working`, `question`, `approval`, `review`, `error`, `idle`. The HTTP contract is documented in [architecture](docs/architecture.md). Unknown or stale process IDs are rejected. Worker output is displayed as data and never interpreted as coordinator commands.
