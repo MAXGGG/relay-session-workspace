@@ -2,9 +2,9 @@
 
 **One attention inbox for your CLI sessions.** Run Claude Code, Codex, a shell, or another interactive CLI. See what needs a decision, handle it, and move to the next item without hunting through terminal windows.
 
-Relay is a local application with four areas: sessions, a priority queue, a coordinator, and the selected session's original terminal. It uses no model or paid API itself. Agents you launch use their own accounts and billing.
+Relay is a local application with four areas: sessions, a priority queue, an agent-backed coordinator, and the selected session's original terminal. Session management and quick actions run locally. Coordinator agent requests and workers use their respective CLI accounts and usage allowances; Relay has no separate service fee.
 
-**Release: 0.2.0.** A working local release for testing with your real projects. The coordinator understands documented commands and prepares explicit reply drafts; it is not an autonomous LLM manager. Automatic project-memory/skill extraction is planned separately. See [release acceptance](docs/release-plan.md) and [validation details](docs/testing.md).
+**Release: 0.3.0.** This release adds a real Codex/Claude coordinator, sidebar organization and deletion, truthful process indicators, and draggable panels. Automatic project-memory/skill extraction is planned separately. See [0.3 goals and acceptance](docs/release-0.3.md), [0.2 history](docs/release-plan.md), and [validation details](docs/testing.md).
 
 ## What works
 
@@ -17,6 +17,9 @@ Relay is a local application with four areas: sessions, a priority queue, a coor
 - Search names, project paths, IDs and notes; rename; archive/restore; optional retirement of inactive stopped sessions.
 - Optional browser notifications when the page is hidden, and a queue count in the tab title.
 - Atomic workspace snapshots, a previous-snapshot backup, exclusive data-directory ownership, and guarded recovery.
+- Sidebar actions to rename, group, pin, reorder, stop/archive, restore, or delete one stopped saved session.
+- Natural-language coordinator requests to find sessions, clarify a task, and create a worker with its initial task.
+- Draggable/keyboard-accessible panel dividers, with saved sizes and a reset option.
 
 ## Install on the computer hosting your agents
 
@@ -28,6 +31,8 @@ Prerequisites:
 2. **Git**, from [git-scm.com](https://git-scm.com/downloads).
 3. A current browser. Playwright is needed only for development tests.
 4. Your desired CLI, installed and authenticated normally. For example, check `codex --version` and `codex login status`, or `claude --version` and `claude auth status --text`.
+
+Use a current CLI version. The Codex coordinator requires `exec --ignore-user-config --ignore-rules --ephemeral --output-schema`; managed Codex terminals require `--no-daemon`. Claude coordinator mode requires `--safe-mode`, `--tools`, and JSON print output. Older CLIs may need updating; Commands only remains available without inference.
 
 ```sh
 git clone https://github.com/MAXGGG/relay-session-workspace.git relay
@@ -50,7 +55,7 @@ The first normal launch is empty. Click **New session** to begin. Keep the serve
 
 ### Try a separate demo first
 
-Sample workers are visibly simulated and make no AI calls. Use a separate data directory so the demo does not alter your real workspace.
+Sample workers are visibly simulated and make no AI calls. Quick-action buttons also use no model. To keep typed coordinator messages offline, select **Settings → Coordinator agent → Commands only**. Use a separate data directory so the demo does not alter your real workspace.
 
 PowerShell:
 
@@ -90,7 +95,7 @@ Relay does not create isolated Git worktrees for you. Concurrent agents editing 
 | Profile | Launch and recovery |
 | --- | --- |
 | Shell | Your system shell. You can run any installed CLI inside it. Restarting returns to a fresh shell. |
-| Codex CLI | Detects `codex`; uses `--no-alt-screen`. An explicit saved conversation ID/name adds `resume <id>`. |
+| Codex CLI | Detects `codex`; uses `--no-daemon --no-alt-screen` so Relay owns the process. An explicit saved conversation ID/name adds `resume <id>`. |
 | Claude Code | Detects `claude`; adds Relay's per-launch hooks. A captured or provided conversation ID adds `--resume <id>`. Global Claude settings are unchanged. |
 | Custom CLI | Your executable with the arguments you specify. Optional custom resume arguments replace initial arguments when a conversation ID is set. |
 
@@ -122,7 +127,29 @@ node /absolute/path/to/relay/scripts/relay-event.mjs review "Implementation is r
 
 Supported events: `working`, `question`, `approval`, `review`, `error`, `idle`. The HTTP contract is documented in [architecture](docs/architecture.md). Unknown or stale process IDs are rejected. Worker output is displayed as data and never interpreted as coordinator commands.
 
-## Coordinator commands
+## Your coordinator agent
+
+Relay automatically chooses installed Codex, then Claude. Click the coordinator's provider button or **Settings** to choose the provider, optional model/executable, default project directory, and preferred worker agent. Sign in to the chosen CLI normally first. No extra API key is needed when that CLI already supports your account login.
+
+Try:
+
+- “Open the session investigating payment retries.”
+- “Create a Codex session to investigate the failing login tests in `C:\\projects\\my-app`, priority P1.”
+- “Put the documentation task in the Client A group and pin it.”
+- “Which task needs my attention next?”
+- “Draft a reply to the login investigation: focus on expired tokens.”
+
+The coordinator receives session metadata, notes, queue summaries, and recent coordinator messages. It can ask follow-up questions, select existing sessions by meaning, and start a requested Claude/Codex worker with the task as its initial prompt. If the project is unknown, supply its existing absolute directory or configure a default. It does not invent folders or execute generated shell commands. Login/trust prompts still belong to the worker's original terminal.
+
+The conversation is saved across browser/server restarts. Each inference receives the last 20 coordinator messages plus current workspace context; this is bounded context, not unlimited memory. Agent mode runs only when you send a chat request. Use **Cancel request** to stop an in-progress coordinator call. Actions already completed remain visible in its result. The server validates actions, refuses arbitrary executables/commands, and reports actual execution outcomes. Replies to existing workers are drafts for your review, and permission approvals remain in the terminal.
+
+The Codex planner uses ephemeral, read-only inference with shell tools, plugins, multi-agent tools, and user/project configuration disabled for that invocation. Claude uses safe mode with built-in tools disabled. These settings apply to the coordinator; coding workers keep their normal CLI configuration. Model choice can be set separately in Settings.
+
+Live coordinator navigation, worker creation, task delivery, and an actual worker response were verified with Codex on Windows. Claude's adapter is tested with a deterministic CLI fixture; real Claude acceptance is still needed on a Claude-equipped machine.
+
+### Quick actions and commands-only mode
+
+Quick-action buttons always use deterministic local commands. With **Commands only** selected, the chat accepts this vocabulary without model calls:
 
 | Command | Effect |
 | --- | --- |
@@ -139,13 +166,21 @@ The reply dialog keeps its original target even if the selected session changes.
 
 ## Keep work without keeping windows open
 
+- Click **⋯** on a sidebar session for actions. Rename/edit lets you assign a group; pin keeps important sessions at the top. Drag a session above another to reorder it and adopt its group/pin section. Move up/down provides a keyboard-friendly alternative. Ordering, groups and pins persist.
 - Add goal/findings/next-step notes in **Edit**. Search includes notes and project paths.
 - **Save output** downloads the retained terminal output; each session retains up to 250,000 characters, including terminal escape sequences.
 - Stop a session when appropriate. Its launch profile, notes, output and pending attention remain.
-- Archive stopped sessions after handling their pending/deferred items. **Show archived sessions** lets you find and restore them.
+- **Stop & archive** stops a running session and hides its record. **Archive session** hides an already-stopped session. Manual archiving keeps pending/deferred attention in the queue. **Show archived sessions** lets you find and restore saved sessions.
+- **Delete saved session…** is available after the process stops. Its confirmation names the session and unresolved-item count. It removes that session's Relay record, notes, attention, delivery receipts, and retained output; project files and the agent's own conversation history remain. Relay's previous-snapshot backup and coordinator chat may still contain earlier references.
 - **Settings** can archive inactive, stopped sessions after 1–365 days. Zero disables it. It does not interrupt running processes or discard pending items.
 
-Relay cannot adopt arbitrary already-open terminal windows. Move existing work by supplying the agent's saved conversation ID/name in a new managed session. Shell state and unsaved process memory cannot be restored by reopening a transcript. Automatic knowledge extraction into `CLAUDE.md`, `AGENTS.md`, and skills is not included in 0.2.
+Relay cannot adopt arbitrary already-open terminal windows. Move existing work by supplying the agent's saved conversation ID/name in a new managed session. Shell state and unsaved process memory cannot be restored by reopening a transcript. Automatic knowledge extraction into `CLAUDE.md`, `AGENTS.md`, and skills is not included in 0.3.
+
+## Status and panel sizes
+
+Blue **Running** means the process is alive; green **Active/Working** means output activity or an explicit working event; amber **Needs attention** means a queued item; purple **Stopping** means shutdown is in progress; grey **Stopped** means no live process; red **Error** means a failure. Hover a dot for its explanation. A running process is not proof that an agent is thinking, and silence is not proof of completion.
+
+Drag the dividers beside the session list and attention queue, or between the coordinator and terminal. Focus a divider and use arrow keys (Shift for larger steps); Home or double-click resets that divider. **Settings → Reset panel sizes** resets all. Sizes persist in this browser. Narrow screens stack panels and hide the vertical dividers.
 
 ## Remote server setup
 
@@ -178,7 +213,7 @@ npm ci
 npm start
 ```
 
-Version 0.2 reads 0.1 workspace files. Formerly running processes become stopped records on startup, while unresolved attention survives. A corrupt snapshot causes startup to stop without replacing the original. Preserve that file, inspect the backup, and restore a valid copy while the server is stopped. A crash may lose the final second of terminal output; it does not imply the agent's underlying conversation store was lost.
+Version 0.3 reads 0.1/0.2 workspace files. Formerly running processes become stopped records on startup, while unresolved attention survives. Interrupted coordinator requests are recorded as failed and never automatically replayed. A corrupt snapshot causes startup to stop without replacing the original. Preserve that file, inspect the backup, and restore a valid copy while the server is stopped. A crash may lose the final second of terminal output; it does not imply the agent's underlying conversation store was lost.
 
 ## Development and testing
 
@@ -204,6 +239,8 @@ npm run smoke:codex
 
 Complete Codex login and initial repository trust first. Alternatively, after reviewing this repository, `npm run smoke:codex -- --trust-project` allows that check to accept Codex's initial trust prompt for this repository. It runs with a read-only sandbox, asks for fixed responses without tool use, tests a reply through Relay's UI, and saves a screenshot/log under ignored `test-artifacts/`. It is excluded from CI and normal verification.
 
+`npm run smoke:coordinator` is another opt-in live check. It makes two coordinator requests and starts one real Codex worker with a fixed-response task. It verifies semantic session lookup, creation, initial-task delivery and the worker's response, saving `test-artifacts/coordinator-live.png` and `.log`. It requires the Relay repository to be trusted already. This worker uses normal CLI configuration and is instructed to use no tools or modify files. Neither live check runs in CI.
+
 ## Troubleshooting
 
 | Symptom | Action |
@@ -218,6 +255,9 @@ Complete Codex login and initial repository trust first. Alternatively, after re
 | Too many quiet suggestions | Increase the quiet interval, use manual mode, or wire structured events. |
 | Start opens a new conversation | Supply an explicit conversation ID or custom resume template; a retained transcript alone is not agent memory. |
 | Reply says terminal changed | Close the draft, open the current session and prepare a new one. This prevents delivery into a replacement process. |
+| Coordinator only understands commands | Select Codex or Claude in Settings and verify that CLI is installed and authenticated. |
+| Coordinator rejects an unknown option | Update the chosen CLI; the adapter uses current documented non-interactive flags. |
+| A stopped session still appears | Stop preserves its record. Use its sidebar **⋯ → Archive session** or **Delete saved session…**. |
 
 The Windows PTY dependency is deliberately pinned to `node-pty@1.2.0-beta.18`, with an isolated compatibility shim and lifecycle regression tests. See [architecture](docs/architecture.md) before upgrading it.
 

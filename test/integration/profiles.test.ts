@@ -76,6 +76,7 @@ test("profiles handle Codex and Claude resume without executing a shell command 
   assert.deepEqual(launchProfile(base, ".", "settings").args, [
     "resume",
     "saved",
+    "--no-daemon",
     "--no-alt-screen",
   ]);
   assert.deepEqual(

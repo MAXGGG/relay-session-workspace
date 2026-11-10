@@ -118,6 +118,7 @@ export class Workspace {
 
   selectItem(id: string): AttentionItem {
     const item = this.item(id);
+    delete this.session(item.sessionId).archivedAt;
     this.state.selectedSessionId = item.sessionId;
     this.state.selectedItemId = item.id;
     return item;
@@ -166,6 +167,8 @@ export class Workspace {
         | "resumeArgs"
         | "attentionMode"
         | "quietSeconds"
+        | "group"
+        | "pinned"
       >
     >,
   ): void {
@@ -174,6 +177,10 @@ export class Workspace {
       throw new Error("Use a session name of 1–100 characters.");
     if (changes.notes !== undefined && changes.notes.length > 20000)
       throw new Error("Notes are too long.");
+    if (changes.group !== undefined && changes.group.length > 60)
+      throw new Error("Use a group name of up to 60 characters.");
+    if (changes.pinned !== undefined && typeof changes.pinned !== "boolean")
+      throw new Error("Pinned must be true or false.");
     if (
       changes.attentionMode !== undefined &&
       !["events", "quiet", "manual"].includes(changes.attentionMode)
@@ -188,13 +195,45 @@ export class Workspace {
       throw new Error("Quiet interval must be 3–3600 seconds.");
     Object.assign(session, changes);
     if (changes.name !== undefined) session.name = changes.name.trim();
+    if (changes.group !== undefined) session.group = changes.group.trim();
   }
 
-  archive(id: string): void {
+  move(id: string, beforeId: string | null): void {
+    const session = this.session(id);
+    if (beforeId === id) return;
+    if (beforeId !== null) this.session(beforeId);
+    const others = this.state.sessions.filter((entry) => entry.id !== id);
+    const index = beforeId === null ? others.length : others.findIndex((s) => s.id === beforeId);
+    others.splice(index, 0, session);
+    this.state.sessions = others;
+  }
+
+  remove(id: string): void {
+    const session = this.session(id);
+    if (session.status !== "stopped" && session.status !== "error")
+      throw new Error("Stop this session before deleting it.");
+    this.state.sessions = this.state.sessions.filter((s) => s.id !== id);
+    this.state.items = this.state.items.filter((item) => item.sessionId !== id);
+    this.state.deliveries = this.state.deliveries?.filter((d) => d.sessionId !== id);
+    this.state.processedEvents = this.state.processedEvents.filter(
+      (key) => !key.startsWith(`${id}:`),
+    );
+    if (this.state.replyDraft?.sessionId === id) delete this.state.replyDraft;
+    if (this.state.selectedSessionId === id) {
+      this.state.selectedSessionId =
+        this.state.sessions.find((s) => s.archivedAt === undefined)?.id ?? null;
+      this.state.selectedItemId = null;
+    }
+  }
+
+  archive(id: string, keepPending = false): void {
     const session = this.session(id);
     if (session.status !== "stopped" && session.status !== "error")
       throw new Error("Stop this session before archiving it.");
-    if (this.state.items.some((item) => item.sessionId === id && item.status !== "resolved"))
+    if (
+      !keepPending &&
+      this.state.items.some((item) => item.sessionId === id && item.status !== "resolved")
+    )
       throw new Error("Handle this session's pending and deferred items before archiving it.");
     session.archivedAt = this.now();
     if (this.state.selectedSessionId === id) {
@@ -212,7 +251,7 @@ export class Workspace {
   retirement(days: number): void {
     if (!Number.isInteger(days) || days < 0 || days > 365)
       throw new Error("Retirement must be 0 (off) or 1–365 days.");
-    this.state.settings = { retireAfterDays: days };
+    this.state.settings = { ...this.state.settings, retireAfterDays: days };
   }
 
   retireInactive(): boolean {
@@ -270,6 +309,15 @@ export class Workspace {
     }
     for (const delivery of this.state.deliveries ?? []) {
       if (delivery.status === "pending") delivery.status = "uncertain";
+    }
+    for (const request of this.state.coordinatorRequests ?? []) {
+      if (request.status === "running") {
+        request.status = "failed";
+        this.message(
+          "assistant",
+          "The coordinator was interrupted by a server restart. Check your sessions before requesting the action again.",
+        );
+      }
     }
     this.wake();
   }

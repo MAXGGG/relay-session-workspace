@@ -216,6 +216,18 @@ h2 {
   background: var(--accent);
   box-shadow: 0 0 7px #a3e3a133;
 }
+
+/* Live process state is distinct from an agent's reported activity. */
+.status-dot.running {
+  background: #79b9ff;
+  box-shadow: 0 0 7px #79b9ff33;
+}
+.status-dot.stopped {
+  background: #778190;
+}
+.status-dot.stopping {
+  background: #c8a6ef;
+}
 .status-dot.waiting {
   background: var(--orange);
 }
@@ -975,5 +987,211 @@ dialog .error-text {
   }
   .chat-form input {
     min-width: 0;
+  }
+}
+
+/* Session organization and adjustable panes. */
+.session-group h3 {
+  margin: 14px 4px 7px;
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.session-card {
+  position: relative;
+  padding: 0;
+  border: 1px solid transparent;
+}
+.session-card.dragging {
+  opacity: 0.45;
+}
+.session-open {
+  width: 100%;
+  display: block;
+  padding: 12px 30px 12px 10px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+.session-card-top {
+  min-width: 0;
+}
+.session-card-name {
+  overflow-wrap: anywhere;
+}
+.session-menu summary {
+  position: absolute;
+  right: 5px;
+  top: 8px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 18px;
+  color: #bfcbd9;
+}
+.session-menu summary::-webkit-details-marker {
+  display: none;
+}
+.session-menu summary:hover,
+.session-menu summary:focus-visible {
+  background: #344039;
+  outline: 1px solid var(--accent);
+}
+.session-menu > div {
+  padding: 6px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.session-menu button {
+  text-align: left;
+  padding: 6px;
+  font-size: 11px;
+  border: 0;
+}
+.session-menu [data-session-action="delete"] {
+  color: #f1a6a6;
+}
+.sessions-panel {
+  min-height: 0;
+}
+.sessions-list {
+  min-height: 0;
+}
+.coordinator-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--accent);
+  margin-top: 7px;
+}
+.coordinator-progress button {
+  font-size: 10px;
+  padding: 4px 6px;
+}
+.coordinator-progress:has(#coordinator-status:empty) {
+  margin-top: 0;
+}
+.chat-form input {
+  min-width: 0;
+}
+.quick-actions {
+  flex-wrap: wrap;
+}
+.workspace {
+  grid-template-columns: var(--sessions-width, 222px) 6px var(--attention-width, 320px) 6px minmax(
+      0,
+      1fr
+    );
+}
+.workbench {
+  padding: 12px;
+  gap: 0;
+  min-width: 0;
+  grid-template-rows: minmax(230px, var(--chat-flex, 0.4fr)) 8px minmax(
+      260px,
+      var(--terminal-flex, 0.6fr)
+    );
+}
+.splitter {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
+  align-self: stretch;
+  background: #172019;
+  position: relative;
+  touch-action: none;
+  outline: none;
+  z-index: 2;
+}
+.splitter::after {
+  content: "";
+  position: absolute;
+  background: #46564a;
+  border-radius: 3px;
+}
+.splitter.vertical {
+  cursor: col-resize;
+}
+.splitter.vertical::after {
+  width: 2px;
+  height: 34px;
+  left: 2px;
+  top: calc(50% - 17px);
+}
+.splitter.horizontal {
+  cursor: row-resize;
+  margin: 1px 0;
+  background: transparent;
+}
+.splitter.horizontal::after {
+  width: 34px;
+  height: 2px;
+  top: 2px;
+  left: calc(50% - 17px);
+}
+.splitter:hover,
+.splitter:focus-visible {
+  background: #354c3c;
+}
+.splitter:focus-visible::after {
+  background: var(--accent);
+}
+.resizing-x,
+.resizing-x * {
+  cursor: col-resize;
+  user-select: none;
+}
+.resizing-y,
+.resizing-y * {
+  cursor: row-resize;
+  user-select: none;
+}
+#reset-layout {
+  margin-top: 12px;
+}
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: minmax(170px, 0.7fr) minmax(250px, 1fr);
+    height: auto;
+    min-height: 0;
+  }
+  .workspace > .splitter {
+    display: none;
+  }
+  .sessions-panel,
+  .attention-panel {
+    min-height: 460px;
+    max-height: 600px;
+  }
+  .workbench {
+    grid-column: 1 / -1;
+    height: 850px;
+  }
+}
+@media (max-width: 520px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sessions-panel {
+    min-height: 270px;
+    max-height: 400px;
+  }
+  .attention-panel {
+    min-height: 430px;
+  }
+  .workbench {
+    height: 950px;
+    padding: 10px;
+  }
+  .panel-title {
+    flex-wrap: wrap;
   }
 }

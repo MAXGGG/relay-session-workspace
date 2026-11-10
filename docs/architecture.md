@@ -4,6 +4,10 @@ Browser (four panels + xterm) → authenticated loopback HTTP/WebSocket → work
 
 `src/core/workspace.ts` owns queue ordering, stable IDs, selection, resolution, snoozing, priority, archive, and retirement policy. `events.ts` normalizes Claude hooks. `attention.ts` handles generic events and explicit quiet-output suggestions. `coordinator.ts` interprets a supported vocabulary and prepares reply drafts. It never executes terminal text itself.
 
+Version 0.3 adds `session-status.ts` for display states derived from live processes and attention. A running idle CLI is blue Running, not a grey stopped record. Sidebar groups/pins and array ordering persist in the workspace. Manual archive can retain pending items; automatic retirement still requires no pending work. Explicit deletion removes one stopped session and its dependent records/output after a matching-name confirmation. Project files and agent-owned history are outside that operation.
+
+`public/layout.js` implements accessible pointer/keyboard splitters, bounded sizing and per-browser persistence. Grid changes resize xterm through the existing ResizeObserver.
+
 `src/server/store.ts` validates and atomically writes snapshots plus a previous-version backup. `lock.ts` prevents multiple servers writing one workspace. `profiles.ts` constructs executable/argument launch profiles. `terminals.ts` owns PTYs, server-side xterm emulation, resize and exit events. `transcripts.ts` persists bounded raw output. `delivery.ts` binds reviewed user input to a process generation and maintains write-ahead receipts. `app.ts` validates HTTP/WebSocket input, authenticates clients, receives events, serves assets and broadcasts snapshots. `main.ts` owns startup/shutdown.
 
 The UI renders state; it cannot decide an item is complete merely because someone opened its terminal. IDs and source request IDs keep session routing independent of mutable titles.
@@ -17,6 +21,8 @@ Bind to 127.0.0.1 only. A random per-run capability token protects state and ter
 ## Terminal protocol and delivery
 
 Each live PTY has a random run ID and a headless xterm instance. Device/cursor queries are answered once on the server, even with no UI attached. Browser xterm suppresses responses to replayed queries. Input is disabled while switching until the selected terminal acknowledges attachment. Live output includes the run ID, preventing late data from an old process entering a new view.
+
+Managed Codex launches include `--no-daemon` so a shared background service does not own the interactive session. Coordinator-created tasks pass their initial prompt as an argument after `--`; the launch timestamp prevents automatically resubmitting it on later starts. This does not discover an agent's conversation ID or turn a new conversation into a resumed one.
 
 `POST /api/reply` accepts a client-generated delivery ID, session ID, current run ID, text, and optional attention-item ID. Repeating the same ID returns its receipt; changing its payload is rejected. Approvals selected from the queue must be handled in the terminal. A pending receipt is persisted before input is written. A crash leaves an uncertain receipt rather than automatically resending. Only the last 500 receipts are retained; deduplication is bounded to those retained IDs.
 
@@ -47,6 +53,14 @@ Quiet mode records recent printable activity and enqueues one suggested activity
 
 ## P2 seam
 Automatic retirement in 0.2 archives only already-stopped sessions with no unresolved items. Future managed retirement can enqueue knowledge extraction before process closure. That job must propose scoped, reviewable changes and retain provenance. It is not implemented in 0.2.
+
+## Agent coordinator (0.3)
+
+`POST /api/chat` records a user request with a stable ID before inference. `coordinator-agent.ts` runs Codex exec or Claude print using stdin, bounded output, cancellation and a three-minute timeout. It uses a fresh scratch working directory outside the project, separate temporary result files, and existing provider authentication. Codex ignores user configuration/rules and repository instructions, disables shell tools/plugins/multi-agent tools, and uses an ephemeral read-only run. Claude uses safe mode, no built-in tools and strict MCP configuration. CLI-managed account policy still applies. This is a configuration boundary, not a sandbox against a malicious installed executable.
+
+The model receives session metadata, notes capped at 1,500 characters per session, up to 60 unresolved attention summaries, and the last 20 coordinator messages. It returns a structured plan with up to three typed actions. It cannot specify a shell command, arbitrary executable, or permanent deletion. Create actions use a known project or an absolute directory supplied in coordinator conversation, and an installed/configured Codex or Claude worker. The UI reports actual execution results; partial success is explicitly retained if a later action fails. Replies remain reviewed drafts. A request interrupted by cancellation/restart is not automatically replayed. The last 100 request IDs are retained for duplicate suppression.
+
+`POST /api/command` remains deterministic for quick actions and Commands only mode. Tests inject a deterministic planner and also exercise actual subprocess transports without paid inference. `smoke:coordinator` is a separate real-model acceptance path. Provider flags follow [Codex non-interactive documentation](https://learn.chatgpt.com/docs/non-interactive-mode) and [Claude CLI reference](https://code.claude.com/docs/en/cli-reference); adapters require current CLIs and do not silently bypass unsupported flags.
 
 ## Windows terminal compatibility
 

@@ -1,5 +1,9 @@
 # Testing and continued development
 
+Version 0.3 adds sidebar organization/deletion, independent process indicators, panel splitters, and a real coordinator agent. The current suite has 20 unit, 26 integration, and 14 browser tests. CI uses deterministic planners and subprocess fixtures; no model calls are made. New checks cover natural-language request transport, semantic-plan application, task creation into a real PTY, request deduplication/cancellation, unknown action and project rejection, archive/delete isolation, drag ordering, keyboard/pointer resizing and layout persistence.
+
+`npm run smoke:coordinator` separately uses a real Codex coordinator to locate an existing session by task meaning, then create a worker with an initial task and observe its actual answer. It was executed successfully on Windows during 0.3 development. It makes two coordinator calls and one worker turn using the installed account; it is never included in CI. See [0.3 acceptance](release-0.3.md) for final release evidence.
+
 Use Node 24+ and `npm ci`. Install Chromium once with `npm run setup:browser` (add `-- --with-deps` for Linux system dependencies). Browser binaries live inside the ignored dependency directory by default.
 
 | Layer | What it proves |

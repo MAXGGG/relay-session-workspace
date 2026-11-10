@@ -54,6 +54,7 @@ export function launchProfile(session: Session, root: string, hookConfig: string
     executable = session.executable || findExecutable("codex") || "codex";
     args = [
       ...(conversation ? ["resume", conversation] : []),
+      "--no-daemon",
       "--no-alt-screen",
       ...(session.args ?? []),
     ];
@@ -65,6 +66,15 @@ export function launchProfile(session: Session, root: string, hookConfig: string
         ? session.resumeArgs.map((arg) => arg.replaceAll("{conversationId}", conversation))
         : (session.args ?? []);
   }
+  if (session.initialPrompt && session.initialPromptStartedAt === undefined && !conversation) {
+    if (session.mode !== "claude" && session.mode !== "codex")
+      throw new Error("Initial tasks require a Claude or Codex session.");
+    args.push("--", session.initialPrompt);
+  }
+  return executableCommand(executable, args);
+}
+
+export function executableCommand(executable: string, args: string[]) {
   executable = findExecutable(executable) ?? executable;
   if (process.platform === "win32" && /\.(cmd|bat)$/i.test(executable)) {
     // A batch shim adds cmd.exe parsing. Keep each argument quoted and refuse

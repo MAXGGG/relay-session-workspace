@@ -83,7 +83,11 @@ function validState(value: unknown): value is WorkspaceState {
         !time(s.lastActivityAt) ||
         !args(s.args) ||
         !args(s.resumeArgs) ||
-        (s.notes !== undefined && !text(s.notes)),
+        (s.notes !== undefined && !text(s.notes)) ||
+        (s.group !== undefined && (!text(s.group) || s.group.length > 60)) ||
+        (s.pinned !== undefined && typeof s.pinned !== "boolean") ||
+        (s.initialPrompt !== undefined && !text(s.initialPrompt)) ||
+        (s.initialPromptStartedAt !== undefined && !time(s.initialPromptStartedAt)),
     )
   )
     return false;
@@ -141,6 +145,34 @@ function validState(value: unknown): value is WorkspaceState {
       !Number.isInteger(state.settings.retireAfterDays) ||
       state.settings.retireAfterDays < 0 ||
       state.settings.retireAfterDays > 365)
+  )
+    return false;
+  const coordinator = state.settings?.coordinator;
+  if (
+    coordinator !== undefined &&
+    (!coordinator ||
+      !["auto", "commands", "codex", "claude"].includes(coordinator.provider) ||
+      [coordinator.model, coordinator.executable, coordinator.defaultCwd].some(
+        (value) => value !== undefined && !text(value),
+      ) ||
+      (coordinator.defaultMode !== undefined &&
+        !["codex", "claude"].includes(coordinator.defaultMode)))
+  )
+    return false;
+  if (
+    state.coordinatorRequests !== undefined &&
+    (!Array.isArray(state.coordinatorRequests) ||
+      state.coordinatorRequests.some(
+        (r) =>
+          !r || !id(r.id) || !text(r.text) || !["running", "done", "failed"].includes(r.status),
+      ))
+  )
+    return false;
+  if (
+    state.replyDraft &&
+    (!id(state.replyDraft.id) ||
+      !sessions.has(state.replyDraft.sessionId) ||
+      !text(state.replyDraft.text))
   )
     return false;
   return true;

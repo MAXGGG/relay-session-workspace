@@ -32,6 +32,7 @@ const kinds = {
 const rendered = new Map();
 function setMarkup(selector, markup) {
   const element = $(selector);
+  if (element.querySelector(".session-menu[open]") || element.querySelector(".dragging")) return;
   // Background activity must not replace a priority selector while it is open.
   if (element.contains(document.activeElement) && document.activeElement.tagName === "SELECT")
     return;
@@ -173,12 +174,31 @@ function render(data) {
       `${s.name} ${s.project} ${s.id} ${s.cwd} ${s.notes ?? ""}`.toLowerCase().includes(query),
   );
   $("#session-count").textContent = state.sessions.filter((s) => s.archivedAt === undefined).length;
+  const groups = new Map();
+  for (const s of sessions.toSorted((a, b) => Number(!!b.pinned) - Number(!!a.pinned))) {
+    const group = s.pinned ? "★ Pinned" : s.group || "Ungrouped";
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group).push(s);
+  }
   const sessionsMarkup = sessions.length
-    ? sessions
-        .map((s) => {
-          const count = data.queue.filter((i) => i.sessionId === s.id).length;
-          return `<button type="button" class="session-card ${state.selectedSessionId === s.id ? "active" : ""}" data-session="${esc(s.id)}" aria-label="Open ${esc(s.name)}" aria-pressed="${state.selectedSessionId === s.id}"><span class="session-card-top"><span class="status-dot ${s.status}"></span><span class="session-card-name">${esc(s.name)}</span>${count ? `<span class="attention-count">${count}</span>` : ""}</span><span class="session-card-project">${esc(s.project)}</span><span class="session-card-bottom"><span>${s.archivedAt !== undefined ? "archived" : s.status} · P${s.priority}</span><span class="sample-tag">${s.mode === "demo" ? "SAMPLE" : s.mode.toUpperCase()}</span></span></button>`;
-        })
+    ? [...groups]
+        .map(
+          ([group, members]) =>
+            `<div class="session-group"><h3>${esc(group)}</h3>${members
+              .map((s) => {
+                const count = data.queue.filter((i) => i.sessionId === s.id).length;
+                const status = data.sessionStatuses?.[s.id] ?? {
+                  code: s.status,
+                  label: s.status,
+                  detail: "",
+                };
+                const live = data.terminals?.[s.id];
+                const menu = (action, text, disabled = false) =>
+                  `<button type="button" data-session-action="${action}" ${disabled ? "disabled" : ""}>${text}</button>`;
+                return `<article class="session-card ${state.selectedSessionId === s.id ? "active" : ""}" data-session-id="${esc(s.id)}" draggable="true"><button type="button" class="session-open" data-session="${esc(s.id)}" aria-label="Open ${esc(s.name)}" aria-pressed="${state.selectedSessionId === s.id}"><span class="session-card-top"><span class="status-dot ${status.code}" data-status="${status.code}" role="img" aria-label="${esc(status.label)}" title="${esc(status.detail)}"></span><span class="session-card-name">${esc(s.name)}</span>${count ? `<span class="attention-count">${count}</span>` : ""}</span><span class="session-card-project">${esc(s.project)}</span><span class="session-card-bottom"><span>${s.archivedAt !== undefined ? "Archived" : esc(status.label)} · P${s.priority}</span><span class="sample-tag">${s.mode === "demo" ? "SAMPLE" : s.mode.toUpperCase()}</span></span></button><details class="session-menu"><summary aria-label="Actions for ${esc(s.name)}" title="Organize session">⋯</summary><div>${menu("edit", "Rename / edit group")}${menu("pin", s.pinned ? "Unpin" : "Pin to top")}${menu("up", "Move up")}${menu("down", "Move down")}${menu("stop", "Stop terminal", !live || live.stopping)}${menu(s.archivedAt !== undefined ? "restore" : live ? "stop-archive" : "archive", s.archivedAt !== undefined ? "restore" : live ? "Stop & archive" : "Archive session", live?.stopping)}${menu("delete", "Delete saved session…", !!live)}</div></details></article>`;
+              })
+              .join("")}</div>`,
+        )
         .join("")
     : `<p class="empty-sessions">${state.sessions.length ? "No matching sessions." : "Start your first CLI session below. Existing conversations can be resumed by ID."}</p>`;
   setMarkup("#sessions", sessionsMarkup);
@@ -229,7 +249,7 @@ function render(data) {
     ? `${session.project} / ${session.id}`
     : "Your original terminal appears here";
   $("#terminal-path").title = session?.cwd ?? "";
-  $("#terminal-status").textContent = live?.stopping ? "stopping" : (session?.status ?? "");
+  $("#terminal-status").textContent = data.sessionStatuses?.[session?.id]?.label ?? "";
   $("#terminal-caption").textContent =
     session?.mode === "demo"
       ? "Sample worker · no AI calls"
@@ -261,6 +281,20 @@ function render(data) {
         )
         .join("")}</select></label></details>`;
   lastFocus = focusKey;
+  const provider = data.coordinator?.provider ?? "commands",
+    busy = data.coordinator?.busy;
+  $("#coordinator-setup").textContent =
+    provider === "commands"
+      ? "Commands · set up agent"
+      : `${provider === "codex" ? "Codex" : "Claude"} agent · settings`;
+  $("#coordinator-status").textContent = busy ? "Thinking and managing your request…" : "";
+  $("#coordinator-cancel").hidden = !busy;
+  $("#chat-send").disabled = !!busy;
+  $("#chat-input").disabled = !!busy;
+  $("#coordinator-hint").textContent =
+    provider === "commands"
+      ? "Commands only. Choose an installed agent in Settings for natural-language requests."
+      : "Ask me to find a session or start a task. Uses your signed-in CLI account.";
   if (state.replyDraft && lastDraft !== state.replyDraft.id) {
     lastDraft = state.replyDraft.id;
     openReply(state.replyDraft.sessionId, state.replyDraft.text);
@@ -318,8 +352,104 @@ function connect() {
   });
 }
 $("#sessions").addEventListener("click", (event) => {
+  const operation = event.target.closest("[data-session-action]");
+  if (operation) {
+    const id = operation.closest("[data-session-id]").dataset.sessionId;
+    operation.closest("details").open = false;
+    sessionAction(id, operation.dataset.sessionAction).catch((error) => toast(error.message));
+    return;
+  }
   const button = event.target.closest("[data-session]");
   if (button) action("/api/select", { sessionId: button.dataset.session });
+});
+async function sessionAction(id, operation) {
+  const session = snapshot.state.sessions.find((s) => s.id === id);
+  if (!session) return;
+  if (operation === "edit") return openSessionDialog(session);
+  if (operation === "pin")
+    return api("/api/session", { sessionId: id, action: "update", pinned: !session.pinned });
+  if (operation === "stop") return api("/api/stop", { sessionId: id });
+  if (operation === "up" || operation === "down") {
+    const siblings = snapshot.state.sessions.filter(
+      (s) =>
+        s.archivedAt === undefined &&
+        !!s.pinned === !!session.pinned &&
+        (s.pinned || (s.group || "") === (session.group || "")),
+    );
+    const index = siblings.findIndex((s) => s.id === id);
+    if (
+      (operation === "up" && index === 0) ||
+      (operation === "down" && index === siblings.length - 1)
+    )
+      return;
+    return api("/api/session", {
+      sessionId: id,
+      action: "move",
+      beforeId: operation === "up" ? siblings[index - 1].id : (siblings[index + 2]?.id ?? null),
+    });
+  }
+  if (operation === "delete") {
+    const pending = snapshot.state.items.filter(
+      (i) => i.sessionId === id && i.status !== "resolved",
+    ).length;
+    if (
+      !confirm(
+        `Delete saved session “${session.name}”? This removes its Relay notes, saved output, and ${pending} unresolved attention item(s). Project files and the agent's own conversation history are kept.`,
+      )
+    )
+      return;
+    await api("/api/session", { sessionId: id, action: "delete", confirmName: session.name });
+    return toast("Saved session deleted. Project files and agent history were kept.");
+  }
+  if (
+    operation === "stop-archive" &&
+    !confirm(
+      `Stop and archive “${session.name}”? Notes, output, and pending attention will be kept.`,
+    )
+  )
+    return;
+  await api("/api/session", { sessionId: id, action: operation });
+  if (operation.includes("archive"))
+    toast("Session archived. Find it with Show archived sessions. Pending attention is kept.");
+}
+let draggingSession;
+$("#sessions").addEventListener("dragstart", (event) => {
+  const card = event.target.closest("[data-session-id]");
+  if (!card || event.target.closest(".session-menu")) return event.preventDefault();
+  draggingSession = card.dataset.sessionId;
+  card.classList.add("dragging");
+  event.dataTransfer.setData("text/plain", draggingSession);
+  event.dataTransfer.effectAllowed = "move";
+});
+$("#sessions").addEventListener("dragover", (event) => {
+  if (draggingSession && event.target.closest("[data-session-id]")) event.preventDefault();
+});
+$("#sessions").addEventListener("drop", async (event) => {
+  const target = event.target.closest("[data-session-id]");
+  if (!target || !draggingSession) return;
+  event.preventDefault();
+  const id = draggingSession,
+    beforeId = target.dataset.sessionId;
+  draggingSession = undefined;
+  for (const card of document.querySelectorAll(".dragging")) card.classList.remove("dragging");
+  if (id === beforeId) return;
+  const other = snapshot.state.sessions.find((s) => s.id === beforeId);
+  try {
+    await api("/api/session", {
+      sessionId: id,
+      action: "update",
+      group: other.group || "",
+      pinned: !!other.pinned,
+    });
+    await api("/api/session", { sessionId: id, action: "move", beforeId });
+  } catch (error) {
+    toast(error.message);
+  }
+});
+$("#sessions").addEventListener("dragend", () => {
+  draggingSession = undefined;
+  for (const card of document.querySelectorAll(".dragging")) card.classList.remove("dragging");
+  if (snapshot) render(snapshot);
 });
 for (const selector of ["#session-search", "#show-archived"])
   $(selector).addEventListener("input", () => {
@@ -368,13 +498,20 @@ $("#chat-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const text = $("#chat-input").value.trim();
   if (!text) return;
+  const id = crypto.randomUUID();
+  $("#chat-input").value = "";
+  $("#chat-send").disabled = true;
   try {
-    await api("/api/command", { text });
-    $("#chat-input").value = "";
+    await api("/api/chat", { text, id });
   } catch (error) {
     toast(error.message);
+    if (!$("#chat-input").value) $("#chat-input").value = text;
+  } finally {
+    $("#chat-send").disabled = !!snapshot?.coordinator?.busy;
   }
 });
+$("#coordinator-cancel").addEventListener("click", () => action("/api/chat/cancel", {}));
+$("#coordinator-setup").addEventListener("click", () => $("#settings").click());
 function openSessionDialog(session) {
   editingId = session?.id;
   const form = $("#session-form");
@@ -394,6 +531,7 @@ function openSessionDialog(session) {
       "priority",
       "executable",
       "notes",
+      "group",
       "conversationId",
       "quietSeconds",
       "attentionMode",
@@ -403,6 +541,8 @@ function openSessionDialog(session) {
     form.elements.args.value = JSON.stringify(session.args ?? []);
     form.elements.resumeArgs.value = JSON.stringify(session.resumeArgs ?? []);
   }
+  if (!session && snapshot?.state.settings?.coordinator?.defaultCwd)
+    form.elements.cwd.value = snapshot.state.settings.coordinator.defaultCwd;
   $("#session-dialog").showModal();
 }
 $("#new-session").addEventListener("click", () => openSessionDialog());
@@ -537,18 +677,37 @@ $("#export-output").addEventListener("click", async () => {
 $("#settings").addEventListener("click", () => {
   $("#settings-form [name=retireAfterDays]").value = snapshot?.state.settings?.retireAfterDays ?? 0;
   $("#settings-error").textContent = "";
+  const config = snapshot?.state.settings?.coordinator;
+  const form = $("#settings-form");
+  form.elements.coordinatorProvider.value = config?.provider ?? "auto";
+  form.elements.coordinatorCwd.value = config?.defaultCwd ?? "";
+  form.elements.coordinatorWorker.value = config?.defaultMode ?? "";
+  form.elements.coordinatorExecutable.value = config?.executable ?? "";
+  form.elements.coordinatorModel.value = config?.model ?? "";
   $("#settings-dialog").showModal();
 });
 $("#settings-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
+    const values = new FormData(event.target);
     await api("/api/settings", {
-      retireAfterDays: Number(new FormData(event.target).get("retireAfterDays")),
+      retireAfterDays: Number(values.get("retireAfterDays")),
+      coordinator: {
+        provider: values.get("coordinatorProvider"),
+        defaultCwd: values.get("coordinatorCwd"),
+        defaultMode: values.get("coordinatorWorker"),
+        executable: values.get("coordinatorExecutable"),
+        model: values.get("coordinatorModel"),
+      },
     });
     $("#settings-dialog").close();
   } catch (error) {
     $("#settings-error").textContent = error.message;
   }
+});
+$("#reset-layout").addEventListener("click", () => {
+  window.dispatchEvent(new Event("relay-reset-layout"));
+  toast("Panel sizes reset.");
 });
 function notificationLabel() {
   $("#notifications").textContent = notifications ? "Notifications on" : "Notifications off";

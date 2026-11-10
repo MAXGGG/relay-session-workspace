@@ -1,5 +1,9 @@
 # Development roadmap
 
+## 0.3: daily session management and coordinator agent
+
+Sidebar actions, pinning, named groups, drag ordering, explicit deletion, process-aware status dots, and resizable panes address the first real-use feedback. Codex/Claude coordinator inference supports semantic navigation, multi-turn clarification, and creation of requested worker tasks through validated actions. See [goals and validation](release-0.3.md).
+
 ## 0.2: working local attention workspace
 
 Implemented agent-independent profiles, original terminals, priority inbox, explicit user replies, lifecycle/recovery, notes/search, and optional notifications. [Acceptance and iteration evidence](release-plan.md) defines the release gate. Measure manual terminal checks, missed attention, time to resume work, and review effort on real projects.
@@ -8,7 +12,7 @@ Implemented agent-independent profiles, original terminals, priority inbox, expl
 
 - Validate Claude hooks against the installed CLI on a Claude-equipped machine. Keep generic fallbacks truthful.
 - Add optional structured integrations when they materially reduce false or missed attention; keep terminal ownership agent-independent.
-- Improve navigation from observed usage. A natural-language coordinator should map into typed, reviewed actions; worker output must remain untrusted data.
+- Improve coordinator intent handling from observed usage and evaluate ambiguous requests. Worker output and task notes remain untrusted data; natural-language plans must stay within typed application actions.
 - Consider lifecycle independence from the launch terminal, saved-conversation discovery, and remote-host connections based on actual demand. Distinguish resuming history from adopting live processes.
 
 ## P2: knowledge before retirement

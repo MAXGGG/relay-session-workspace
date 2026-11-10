@@ -36,9 +36,12 @@ test("empty onboarding launches a custom CLI and saves editable task notes", asy
   await expect(page.locator("#sessions")).toContainText("first CLI session");
   await page.getByRole("button", { name: "New session" }).click();
   await page.getByLabel("Name", { exact: true }).fill("Local worker");
-  await page.getByLabel("Project directory").fill(projectRoot);
+  await page.getByLabel("Project directory", { exact: true }).fill(projectRoot);
   await page.getByLabel("Session type").selectOption("custom");
-  await page.getByLabel("Executable", { exact: false }).fill(process.execPath);
+  await page
+    .locator("#session-form")
+    .getByLabel("Executable", { exact: false })
+    .fill(process.execPath);
   await page.getByLabel("Attention detection").selectOption("events");
   await page.getByText("Launch arguments and recovery", { exact: true }).click();
   await page
@@ -99,12 +102,12 @@ test("attention details, classification, reopen, archive and restore preserve wo
   await expect(page.locator("#pending-count")).toHaveText("1");
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Stop", exact: true }).click();
-  await expect(page.locator("#terminal-status")).toHaveText("stopped");
+  await expect(page.locator("#terminal-status")).toHaveText("Stopped");
   await waitUntil(() => !app.terminals.records.has(id));
   await page.getByRole("button", { name: "Archive", exact: true }).click();
-  await expect(page.locator("#toast")).toContainText("pending");
+  await expect(page.locator(".session-card")).toHaveCount(0);
+  await expect(page.locator("#pending-count")).toHaveText("1");
   await page.getByRole("button", { name: "Mark reviewed", exact: true }).click();
-  await page.getByRole("button", { name: "Archive", exact: true }).click();
   await expect(page.locator(".session-card")).toHaveCount(0);
   await page.getByLabel("Show archived sessions").check();
   await page.getByRole("button", { name: "Open Lifecycle" }).click();

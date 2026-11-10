@@ -76,10 +76,10 @@ test("create a real shell, search it, and show clear validation for missing proj
 }) => {
   await page.getByRole("button", { name: "New session" }).click();
   await page.getByLabel("Name", { exact: true }).fill("My shell");
-  await page.getByLabel("Project directory").fill("/missing-relay-project");
+  await page.getByLabel("Project directory", { exact: true }).fill("/missing-relay-project");
   await page.getByRole("button", { name: "Start session" }).click();
   await expect(page.locator("#dialog-error")).toContainText("does not exist");
-  await page.getByLabel("Project directory").fill(projectRoot);
+  await page.getByLabel("Project directory", { exact: true }).fill(projectRoot);
   await page.getByRole("button", { name: "Start session" }).click();
   await expect(page.locator("#terminal-name")).toHaveText("My shell");
   await expect(page.locator("#terminal-mode")).toHaveText("SHELL");
@@ -87,7 +87,7 @@ test("create a real shell, search it, and show clear validation for missing proj
   await expect(page.locator(".session-card")).toHaveCount(1);
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Stop", exact: true }).click();
-  await expect(page.locator("#terminal-status")).toHaveText("stopped");
+  await expect(page.locator("#terminal-status")).toHaveText("Stopped");
 });
 
 test("desktop and compact layouts stay usable without horizontal overflow", async ({ page }) => {

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 /** Bounded raw terminal replay, kept separately from the searchable workspace metadata. */
@@ -32,5 +32,12 @@ export class Transcripts {
       renameSync(`${file}.tmp`, file);
       this.dirty.delete(id);
     }
+  }
+  remove(id: string): void {
+    const file = this.file(id);
+    rmSync(file, { force: true });
+    rmSync(`${file}.tmp`, { force: true });
+    this.buffers.delete(id);
+    this.dirty.delete(id);
   }
 }

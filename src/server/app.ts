@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -9,8 +9,17 @@ import { ingestSessionEvent, QuietMonitor } from "../core/attention.ts";
 import { coordinate } from "../core/coordinator.ts";
 import { seedDemo } from "../core/demo.ts";
 import { ingestEvent } from "../core/events.ts";
-import type { SessionEvent, SessionMode, WorkerEvent } from "../core/types.ts";
-import { Workspace } from "../core/workspace.ts";
+import { sessionStatus } from "../core/session-status.ts";
+import type { CoordinatorSettings, SessionEvent, SessionMode, WorkerEvent } from "../core/types.ts";
+import { validPriority, Workspace } from "../core/workspace.ts";
+import {
+  type CoordinatorAction,
+  type CoordinatorRunner,
+  coordinatorPrompt,
+  coordinatorProvider,
+  parseCoordinatorPlan,
+  runCoordinator,
+} from "./coordinator-agent.ts";
 import { deliverReply } from "./delivery.ts";
 import { acquireWorkspace } from "./lock.ts";
 import { argumentList, findExecutable } from "./profiles.ts";
@@ -21,7 +30,13 @@ import { Transcripts } from "./transcripts.ts";
 export const projectRoot = fileURLToPath(new URL("../../", import.meta.url));
 
 export async function createApp(
-  options: { port?: number; stateDir?: string; demo?: boolean; token?: string } = {},
+  options: {
+    port?: number;
+    stateDir?: string;
+    demo?: boolean;
+    token?: string;
+    coordinatorRunner?: CoordinatorRunner;
+  } = {},
 ) {
   const directory = options.stateDir ?? path.join(projectRoot, ".relay");
   const releaseLock = acquireWorkspace(directory);
@@ -39,6 +54,8 @@ export async function createApp(
     const sockets = new WebSocketServer({ noServer: true, maxPayload: 65536 });
     const selected = new Map<WebSocket, string>();
     let address = "";
+    let coordinatorAbort: AbortController | undefined;
+    let coordinatorTask: Promise<void> | undefined;
     const state = () => {
       const queue = workspace.queue();
       return {
@@ -46,6 +63,16 @@ export async function createApp(
         queue,
         claudeAvailable: Boolean(detectedClaude),
         executables: { claude: detectedClaude ?? null, codex: findExecutable("codex") ?? null },
+        coordinator: {
+          provider: coordinatorProvider(workspace.state.settings?.coordinator),
+          busy: Boolean(coordinatorAbort),
+        },
+        sessionStatuses: Object.fromEntries(
+          workspace.state.sessions.map((s) => [
+            s.id,
+            sessionStatus(s, terminals.records.get(s.id), workspace.state.items),
+          ]),
+        ),
         terminals: Object.fromEntries(
           [...terminals.records].map(([id, record]) => [
             id,
@@ -130,6 +157,8 @@ export async function createApp(
       try {
         const started = terminals.start(session);
         if (started) {
+          if (session.initialPrompt && session.initialPromptStartedAt === undefined)
+            session.initialPromptStartedAt = workspace.now();
           monitor.observations.delete(sessionId);
           transcripts.append(
             sessionId,
@@ -150,6 +179,143 @@ export async function createApp(
         throw new Error(
           `Could not start ${session.name}. Check the executable and project directory.`,
         );
+      }
+    };
+    const stopTerminal = async (id: string) => {
+      const session = workspace.session(id);
+      const record = terminals.records.get(id);
+      if (record) {
+        intentionalStops.add(id);
+        terminals.stop(id);
+        session.status = "stopped";
+        broadcast();
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        try {
+          await Promise.race([
+            record.finished,
+            new Promise((_, reject) => {
+              timeout = setTimeout(
+                () => reject(new Error("Terminal is still stopping. Try again shortly.")),
+                10000,
+              );
+            }),
+          ]);
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
+      session.status = "stopped";
+    };
+    const workerExecutable = (mode: "codex" | "claude") => {
+      const settings = workspace.state.settings?.coordinator;
+      return (
+        (coordinatorProvider(settings) === mode ? settings?.executable : undefined) ||
+        workspace.state.sessions.find((s) => s.mode === mode && s.executable)?.executable ||
+        findExecutable(mode)
+      );
+    };
+    const applyCoordinatorAction = async (action: CoordinatorAction): Promise<string> => {
+      if (action.kind === "next") {
+        const item = workspace.next();
+        return item
+          ? `Opened ${workspace.session(item.sessionId).name}: ${item.title}`
+          : "No pending attention items.";
+      }
+      if (action.kind === "create") {
+        const cwd = singleLine(action.cwd, 4000);
+        if (!path.isAbsolute(cwd) || !existsSync(cwd) || !statSync(cwd).isDirectory())
+          throw new Error("Choose an existing absolute project directory.");
+        const normalizeText = (value: string) => {
+          const normalized = value.replaceAll("\\", "/");
+          return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+        };
+        const normalize = (value: string) => normalizeText(path.resolve(value));
+        const known = [
+          ...workspace.state.sessions.map((s) => s.cwd),
+          workspace.state.settings?.coordinator?.defaultCwd,
+        ].filter((v): v is string => Boolean(v));
+        const mentioned = workspace.state.messages
+          .filter((m) => m.role === "user")
+          .slice(-20)
+          .some((m) => normalizeText(m.text).includes(normalize(cwd)));
+        if (!known.some((v) => normalize(v) === normalize(cwd)) && !mentioned)
+          throw new Error(
+            "Please supply the project directory in the coordinator chat or set a default in Settings.",
+          );
+        if (action.mode !== "codex" && action.mode !== "claude")
+          throw new Error("Choose Claude or Codex for the new task.");
+        const executable = workerExecutable(action.mode);
+        if (!executable)
+          throw new Error(`${action.mode} is not installed or configured on this computer.`);
+        const session = workspace.addSession({
+          name: string(action.name, 100),
+          cwd: path.resolve(cwd),
+          project: path.basename(cwd),
+          mode: action.mode,
+          priority: validPriority(action.priority ?? 2),
+          executable,
+          notes: action.task ?? "",
+          initialPrompt: action.task || undefined,
+          attentionMode: action.mode === "claude" ? "events" : "quiet",
+          quietSeconds: 15,
+        });
+        workspace.selectSession(session.id);
+        startTerminal(session.id);
+        return `Created and started ${session.name} (${session.id}) in ${session.cwd}.${session.initialPrompt ? " Initial task passed to the agent; any login or trust prompt remains in its terminal." : ""}`;
+      }
+      if (action.kind === "resolve" || action.kind === "defer") {
+        const id = string(action.itemId);
+        if (action.kind === "resolve") workspace.resolve(id);
+        else workspace.snooze(id, action.minutes ?? 30);
+        return `${action.kind === "resolve" ? "Handled" : "Deferred"} ${id}.`;
+      }
+      if (action.kind === "open" && action.itemId) {
+        const item = workspace.selectItem(action.itemId);
+        return `Opened ${item.id} in ${workspace.session(item.sessionId).name}.`;
+      }
+      const session = workspace.session(string(action.sessionId));
+      switch (action.kind) {
+        case "open":
+          workspace.restore(session.id);
+          return `Opened ${session.name}.`;
+        case "start":
+          workspace.restore(session.id);
+          startTerminal(session.id);
+          return `Started ${session.name}.`;
+        case "stop":
+          await stopTerminal(session.id);
+          return `Stopped ${session.name}; saved work retained.`;
+        case "archive":
+          if (terminals.records.has(session.id))
+            throw new Error(`Stop ${session.name} before archiving it.`);
+          if (session.status !== "error") session.status = "stopped";
+          workspace.archive(session.id, true);
+          return `Archived ${session.name}; pending attention and output retained.`;
+        case "priority":
+          workspace.priority(session.id, Number(action.priority));
+          return `${session.name} is P${action.priority}.`;
+        case "rename":
+          workspace.updateSession(session.id, { name: string(action.name, 100) });
+          return `Renamed session to ${session.name}.`;
+        case "group":
+          workspace.updateSession(session.id, { group: action.group ?? "" });
+          return `Moved ${session.name} to ${session.group || "Ungrouped"}.`;
+        case "pin":
+          if (typeof action.pinned !== "boolean") throw new Error("Choose pin or unpin.");
+          workspace.updateSession(session.id, { pinned: action.pinned });
+          return `${action.pinned ? "Pinned" : "Unpinned"} ${session.name}.`;
+        case "reply":
+          if (!terminals.records.has(session.id))
+            throw new Error("Start the session before drafting a reply.");
+          workspace.state.replyDraft = {
+            id: randomUUID(),
+            sessionId: session.id,
+            text: string(action.text, 8000),
+          };
+          workspace.selectSession(session.id);
+          return `Reply drafted for ${session.name}. Review it and click Send to terminal.`;
+        default:
+          throw new Error("Unsupported coordinator action.");
       }
     };
     const server = http.createServer(async (request, response) => {
@@ -184,6 +350,84 @@ export async function createApp(
             return respond(response, 405, { error: "Use POST for this action." });
           const body = await readBody(request);
           switch (url.pathname) {
+            case "/api/chat/cancel":
+              coordinatorAbort?.abort();
+              break;
+            case "/api/chat": {
+              const text = string(body.text, 8000),
+                id = singleLine(body.id, 100);
+              if (!/^[\w-]{1,100}$/.test(id)) throw new Error("Invalid coordinator request ID.");
+              workspace.state.coordinatorRequests ??= [];
+              const requests = workspace.state.coordinatorRequests;
+              const previous = requests.find((r) => r.id === id);
+              if (previous) {
+                if (previous.text !== text)
+                  throw new Error("This chat request ID has already been used.");
+                return respond(response, previous.status === "running" ? 202 : 200, state());
+              }
+              if (coordinatorAbort)
+                throw new Error("The coordinator is answering. Wait or cancel this request first.");
+              const settings = workspace.state.settings?.coordinator ?? {
+                provider: "auto" as const,
+              };
+              const provider = coordinatorProvider(settings);
+              if (provider === "commands") {
+                coordinate(workspace, text);
+                break;
+              }
+              const request = { id, text, status: "running" as "running" | "done" | "failed" };
+              requests.push(request);
+              workspace.state.coordinatorRequests = requests.slice(-100);
+              workspace.message("user", text);
+              const controller = new AbortController();
+              coordinatorAbort = controller;
+              broadcast();
+              coordinatorTask = (async () => {
+                const results: string[] = [];
+                try {
+                  const raw = await (options.coordinatorRunner ?? runCoordinator)({
+                    provider,
+                    settings,
+                    directory,
+                    signal: controller.signal,
+                    prompt: coordinatorPrompt(
+                      workspace.snapshot(),
+                      [...terminals.records.keys()],
+                      ["codex", "claude"].filter((mode) =>
+                        workerExecutable(mode as "codex" | "claude"),
+                      ),
+                    ),
+                  });
+                  if (controller.signal.aborted)
+                    throw new Error("Coordinator request cancelled. No new actions were applied.");
+                  const plan = parseCoordinatorPlan(raw);
+                  for (const action of plan.actions) {
+                    if (controller.signal.aborted)
+                      throw new Error("Coordinator request cancelled.");
+                    results.push(await applyCoordinatorAction(action));
+                    broadcast();
+                  }
+                  workspace.message(
+                    "assistant",
+                    [plan.message, ...results.map((result) => `• ${result}`)]
+                      .filter(Boolean)
+                      .join("\n\n"),
+                  );
+                  request.status = "done";
+                } catch (error) {
+                  request.status = "failed";
+                  workspace.message(
+                    "assistant",
+                    `${results.length ? `Completed before the error:\n${results.join("\n")}\n\n` : ""}${error instanceof Error ? error.message : "Coordinator request failed."}`,
+                  );
+                } finally {
+                  coordinatorAbort = undefined;
+                  broadcast();
+                }
+              })();
+              await coordinatorTask;
+              return respond(response, 200, state());
+            }
             case "/api/reply": {
               const delivery = await deliverReply(workspace, terminals, store, {
                 id: body.id,
@@ -251,6 +495,7 @@ export async function createApp(
                 attentionMode,
                 quietSeconds,
                 notes: body.notes ?? "",
+                group: body.group ? singleLine(body.group, 60) : "",
                 ...(claudeId ? { claudeId } : {}),
               });
               workspace.selectSession(session.id);
@@ -262,7 +507,26 @@ export async function createApp(
               if (body.action === "archive") {
                 if (terminals.records.has(id))
                   throw new Error("Wait for the terminal to stop before archiving.");
-                workspace.archive(id);
+                if (workspace.session(id).status !== "error")
+                  workspace.session(id).status = "stopped";
+                workspace.archive(id, true);
+              } else if (body.action === "stop-archive") {
+                await stopTerminal(id);
+                workspace.archive(id, true);
+              } else if (body.action === "delete") {
+                const session = workspace.session(id);
+                if (body.confirmName !== session.name)
+                  throw new Error("Confirm the session name before deleting.");
+                if (terminals.records.has(id))
+                  throw new Error("Stop the terminal before deleting its record.");
+                if (session.status !== "stopped" && session.status !== "error")
+                  session.status = "stopped";
+                transcripts.remove(id);
+                workspace.remove(id);
+                monitor.observations.delete(id);
+                for (const [ws, current] of selected) if (current === id) selected.delete(ws);
+              } else if (body.action === "move") {
+                workspace.move(id, body.beforeId === null ? null : string(body.beforeId));
               } else if (body.action === "restore") workspace.restore(id);
               else if (body.action === "update") {
                 const changes: Record<string, unknown> = {};
@@ -273,6 +537,8 @@ export async function createApp(
                   "executable",
                   "attentionMode",
                   "quietSeconds",
+                  "group",
+                  "pinned",
                 ])
                   if (body[field] !== undefined) changes[field] = body[field];
                 for (const field of [
@@ -281,6 +547,7 @@ export async function createApp(
                   "conversationId",
                   "executable",
                   "attentionMode",
+                  "group",
                 ])
                   if (changes[field] !== undefined && typeof changes[field] !== "string")
                     throw new Error(`Invalid ${field}.`);
@@ -293,9 +560,42 @@ export async function createApp(
               } else throw new Error("Unknown session action.");
               break;
             }
-            case "/api/settings":
-              workspace.retirement(Number(body.retireAfterDays));
+            case "/api/settings": {
+              const days = Number(
+                body.retireAfterDays ?? workspace.state.settings?.retireAfterDays ?? 0,
+              );
+              let coordinator: CoordinatorSettings | undefined;
+              if (body.coordinator !== undefined) {
+                if (
+                  !body.coordinator ||
+                  !["auto", "commands", "codex", "claude"].includes(body.coordinator.provider)
+                )
+                  throw new Error("Choose a coordinator provider.");
+                coordinator = { provider: body.coordinator.provider };
+                for (const field of ["model", "executable", "defaultCwd"] as const)
+                  if (body.coordinator[field])
+                    coordinator[field] = singleLine(
+                      body.coordinator[field],
+                      field === "model" ? 200 : 4000,
+                    );
+                if (
+                  coordinator.defaultCwd &&
+                  (!path.isAbsolute(coordinator.defaultCwd) ||
+                    !existsSync(coordinator.defaultCwd) ||
+                    !statSync(coordinator.defaultCwd).isDirectory())
+                )
+                  throw new Error("Default project directory must exist and be absolute.");
+                if (body.coordinator.defaultMode) {
+                  if (!["codex", "claude"].includes(body.coordinator.defaultMode))
+                    throw new Error("Choose a default worker agent.");
+                  coordinator.defaultMode = body.coordinator.defaultMode;
+                }
+              }
+              workspace.retirement(days);
+              if (coordinator && workspace.state.settings)
+                workspace.state.settings.coordinator = coordinator;
               break;
+            }
             case "/api/attention": {
               const sessionId = string(body.sessionId);
               const text = string(body.text, 20000);
@@ -384,6 +684,7 @@ export async function createApp(
         const assets: Record<string, string> = {
           "/": "public/index.html",
           "/app.js": "public/app.js",
+          "/layout.js": "public/layout.js",
           "/styles.css": "public/styles.css",
           "/vendor/xterm.js": "node_modules/@xterm/xterm/lib/xterm.js",
           "/vendor/xterm.css": "node_modules/@xterm/xterm/css/xterm.css",
@@ -434,7 +735,14 @@ export async function createApp(
           if (message.type === "attach") {
             selected.set(ws, id);
             // Sample workers are safe to launch on first view. Real stopped sessions require Start.
-            if (session.mode === "demo" && !terminals.records.has(id)) startTerminal(id);
+            if (
+              session.mode === "demo" &&
+              !terminals.records.has(id) &&
+              session.status !== "stopped" &&
+              session.status !== "error" &&
+              session.archivedAt === undefined
+            )
+              startTerminal(id);
             send(ws, {
               type: "attached",
               sessionId: id,
@@ -460,6 +768,8 @@ export async function createApp(
     });
 
     startupCleanup = async () => {
+      coordinatorAbort?.abort();
+      await coordinatorTask;
       await terminals.dispose();
       for (const ws of sockets.clients) ws.terminate();
       sockets.close();

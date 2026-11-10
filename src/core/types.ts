@@ -19,6 +19,10 @@ export interface Session {
   resumeArgs?: string[];
   conversationId?: string;
   notes?: string;
+  group?: string;
+  pinned?: boolean;
+  initialPrompt?: string;
+  initialPromptStartedAt?: number;
   archivedAt?: number;
   attentionMode?: "events" | "quiet" | "manual";
   quietSeconds?: number;
@@ -56,8 +60,17 @@ export interface WorkspaceState {
   selectedItemId: string | null;
   processedEvents: string[];
   deliveries?: Delivery[];
-  settings?: { retireAfterDays: number };
+  settings?: { retireAfterDays: number; coordinator?: CoordinatorSettings };
   replyDraft?: { id: string; sessionId: string; text: string };
+  coordinatorRequests?: { id: string; text: string; status: "running" | "done" | "failed" }[];
+}
+
+export interface CoordinatorSettings {
+  provider: "auto" | "commands" | "codex" | "claude";
+  model?: string;
+  executable?: string;
+  defaultCwd?: string;
+  defaultMode?: "codex" | "claude";
 }
 
 export interface Delivery {
