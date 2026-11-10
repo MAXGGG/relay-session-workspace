@@ -134,7 +134,7 @@ Relay automatically chooses installed Codex, then Claude. Click the coordinator'
 Try:
 
 - “Open the session investigating payment retries.”
-- “Create a Codex session to investigate the failing login tests in `C:\\projects\\my-app`, priority P1.”
+- “Create a Codex session to investigate the failing login tests in `C:\projects\my-app`, priority P1.”
 - “Put the documentation task in the Client A group and pin it.”
 - “Which task needs my attention next?”
 - “Draft a reply to the login investigation: focus on expired tokens.”
