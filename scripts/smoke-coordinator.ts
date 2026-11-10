@@ -23,7 +23,7 @@ try {
   };
   const existing = app.workspace.addSession({
     name: "Billing recovery",
-    project: "Relay",
+    project: "Zyi",
     cwd: projectRoot,
     mode: "codex",
     status: "stopped",

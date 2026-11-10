@@ -1,9 +1,9 @@
 {
-  "name": "relay-session-workspace",
-  "version": "0.3.0",
+  "name": "zyi",
+  "version": "0.4.0",
   "private": true,
   "license": "MIT",
-  "description": "A local attention inbox and terminal workspace for Claude, Codex, and other CLI sessions.",
+  "description": "Zyi: one attention inbox and desktop workspace for your CLI agents.",
   "type": "module",
   "scripts": {
     "start": "node src/server/main.ts",
@@ -19,7 +19,11 @@
     "setup:browser": "node scripts/install-browser.mjs",
     "smoke:codex": "node scripts/smoke-codex.ts",
     "smoke:coordinator": "node scripts/smoke-coordinator.ts",
-    "verify": "npm run check && npm test && npm run test:coverage && npm run test:e2e"
+    "verify": "npm run check && npm test && npm run test:coverage && npm run test:e2e",
+    "build:desktop": "node scripts/build-desktop.mjs",
+    "desktop": "npm run build:desktop && electron build/desktop-app",
+    "package:desktop": "npm run build:desktop && electron-builder --config electron-builder.json --publish never",
+    "test:desktop": "node --test test/desktop/*.test.ts"
   },
   "dependencies": {
     "@xterm/addon-fit": "0.11.0",
@@ -36,9 +40,17 @@
     "@playwright/test": "^1.65.0",
     "@types/node": "^24.19.2",
     "@types/ws": "^8.18.2",
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0",
     "typescript": "^7.0.2"
   },
   "allowScripts": {
-    "node-pty@1.2.0-beta.18": true
+    "node-pty@1.2.0-beta.18": true,
+    "electron@45.2.3": true
+  },
+  "author": "Zyi contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MAXGGG/zyi.git"
   }
 }

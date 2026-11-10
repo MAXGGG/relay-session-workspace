@@ -12,3 +12,5 @@ coverage/
 !.env.example
 .DS_Store
 Thumbs.db
+build/
+release/

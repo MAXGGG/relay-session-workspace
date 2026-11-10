@@ -1,10 +1,24 @@
-# Relay
+# Zyi
 
 **One attention inbox for your CLI sessions.** Run Claude Code, Codex, a shell, or another interactive CLI. See what needs a decision, handle it, and move to the next item without hunting through terminal windows.
 
-Relay is a local application with four areas: sessions, a priority queue, an agent-backed coordinator, and the selected session's original terminal. Session management and quick actions run locally. Coordinator agent requests and workers use their respective CLI accounts and usage allowances; Relay has no separate service fee.
+Zyi is a local application with four areas: sessions, a priority queue, an agent-backed coordinator, and the selected session's original terminal. Session management and quick actions run locally. Coordinator agent requests and workers use their respective CLI accounts and usage allowances; Zyi has no separate service fee.
 
-**Release: 0.3.0.** This release adds a real Codex/Claude coordinator, sidebar organization and deletion, truthful process indicators, and draggable panels. Automatic project-memory/skill extraction is planned separately. See [0.3 goals and acceptance](docs/release-0.3.md), [0.2 history](docs/release-plan.md), and [validation details](docs/testing.md).
+**Release: 0.4.0 desktop preview.** Formerly Relay, now **Zyi**, inspired by 注意 (attention). Install it as a desktop app on Windows or macOS, with a bundled terminal engine, background operation and persistent storage. Automatic project-memory/skill extraction is planned separately. See [0.4 goals and acceptance](docs/release-0.4.md), [0.3 history](docs/release-0.3.md), and [validation details](docs/testing.md).
+
+## Desktop installation
+
+Download the matching package from [GitHub Releases](https://github.com/MAXGGG/zyi/releases):
+
+| Computer | Download |
+| --- | --- |
+| Windows x64 | `Zyi-0.4.0-win-x64.exe` installer |
+| Mac with Apple Silicon (M1 or newer) | `Zyi-0.4.0-mac-arm64.dmg` |
+| Intel Mac | `Zyi-0.4.0-mac-x64.dmg` |
+
+Install and open **Zyi**. Zyi includes its own Node runtime; install and authenticate your desired agent separately. Windows builds are unsigned and macOS builds are ad-hoc signed, not notarized, so this preview may trigger first-launch OS warnings. Read the [full desktop setup guide](docs/desktop.md) for installation, importing existing sessions, storage locations, upgrades and troubleshooting.
+
+Closing the window keeps agents running in the tray/menu bar. **Quit Zyi** stops managed processes. The desktop app stores its workspace outside the installation directory. Use **Zyi → Import saved workspace…** to copy a stopped legacy `.relay` workspace into an empty desktop workspace.
 
 ## What works
 
@@ -21,9 +35,9 @@ Relay is a local application with four areas: sessions, a priority queue, an age
 - Natural-language coordinator requests to find sessions, clarify a task, and create a worker with its initial task.
 - Draggable/keyboard-accessible panel dividers, with saved sizes and a reset option.
 
-## Install on the computer hosting your agents
+## Run from source on the computer hosting your agents
 
-Relay manages processes it launches **on the same machine and OS environment**. If your agents run in WSL, install Node and Relay in that WSL distribution. If they run on a server, use the SSH instructions below.
+Zyi manages processes it launches **on the same machine and OS environment**. If your agents run in WSL, install Node and Zyi in that WSL distribution. If they run on a server, use the SSH instructions below.
 
 Prerequisites:
 
@@ -35,8 +49,8 @@ Prerequisites:
 Use a current CLI version. The Codex coordinator requires `exec --ignore-user-config --ignore-rules --ephemeral --output-schema`; managed Codex terminals require `--no-daemon`. Claude coordinator mode requires `--safe-mode`, `--tools`, and JSON print output. Older CLIs may need updating; Commands only remains available without inference.
 
 ```sh
-git clone https://github.com/MAXGGG/relay-session-workspace.git relay
-cd relay
+git clone https://github.com/MAXGGG/zyi.git zyi
+cd zyi
 npm ci
 npm start
 ```
@@ -46,7 +60,7 @@ These commands work in PowerShell, Command Prompt, Bash, and Zsh. Run them in th
 Open the **complete URL printed by your server**, including its token:
 
 ```text
-Relay is ready: http://127.0.0.1:8123/#token=...
+Zyi is ready: http://127.0.0.1:8123/#token=...
 ```
 
 The token grants access to your terminals. Keep the launch link private. Each server start generates a new token; use its new link after a server restart. Your queue and session records persist.
@@ -88,20 +102,20 @@ Click **Next task**, answer the sample question in its terminal, then mark the r
 4. Work in the original terminal as usual. Use `next task` to open queued attention and **Reply…** to compose a message to a fixed, visible target.
 5. Mark an item handled when you have dealt with it, or defer it. Opening it does not resolve it; sending a reply does not automatically approve the result.
 
-Relay does not create isolated Git worktrees for you. Concurrent agents editing the same repository should use separate worktrees/directories when their changes could interfere.
+Zyi does not create isolated Git worktrees for you. Concurrent agents editing the same repository should use separate worktrees/directories when their changes could interfere.
 
 ### Launch settings
 
 | Profile | Launch and recovery |
 | --- | --- |
 | Shell | Your system shell. You can run any installed CLI inside it. Restarting returns to a fresh shell. |
-| Codex CLI | Detects `codex`; uses `--no-daemon --no-alt-screen` so Relay owns the process. An explicit saved conversation ID/name adds `resume <id>`. |
-| Claude Code | Detects `claude`; adds Relay's per-launch hooks. A captured or provided conversation ID adds `--resume <id>`. Global Claude settings are unchanged. |
+| Codex CLI | Detects `codex`; uses `--no-daemon --no-alt-screen` so Zyi owns the process. An explicit saved conversation ID/name adds `resume <id>`. |
+| Claude Code | Detects `claude`; adds Zyi's per-launch hooks. A captured or provided conversation ID adds `--resume <id>`. Global Claude settings are unchanged. |
 | Custom CLI | Your executable with the arguments you specify. Optional custom resume arguments replace initial arguments when a conversation ID is set. |
 
 Use **Executable** if auto-detection fails. Enter only the executable path there; put options in **Arguments**, as a JSON array. Example: `["--model", "your-model"]`. A Node worker could use executable `node` and arguments `["/absolute/path/worker.js"]`. Paths with spaces remain single arguments. Windows npm `.cmd` and `.bat` shims are supported with quoted arguments; arguments containing embedded double quotes or `%` require the native executable and are rejected for shims.
 
-Custom resume example: `["resume", "{conversationId}"]`. Relay substitutes the saved ID into each argument. **Edit** updates names/notes immediately; launch changes take effect on the next start.
+Custom resume example: `["resume", "{conversationId}"]`. Zyi substitutes the saved ID into each argument. **Edit** updates names/notes immediately; launch changes take effect on the next start.
 
 ## How attention detection works
 
@@ -113,7 +127,7 @@ Custom resume example: `["resume", "{conversationId}"]`. Relay substitutes the s
 
 Quiet mode defaults to 15 seconds and produces **Check activity**, not a claim that the task finished. Change the interval or turn it off in **Edit**. It does not repeatedly enqueue unchanged output, and deferred work stays deferred.
 
-Claude hooks identify explicit permission and question-tool events. Classification of a plain-language final response is still a suggestion; you can correct it using **Classify as**. A completed response is not proof the entire project is done. Review approvals in the original terminal; Relay never answers or grants them autonomously.
+Claude hooks identify explicit permission and question-tool events. Classification of a plain-language final response is still a suggestion; you can correct it using **Classify as**. A completed response is not proof the entire project is done. Review approvals in the original terminal; Zyi never answers or grants them autonomously.
 
 ### Agent-independent event bridge
 
@@ -129,7 +143,7 @@ Supported events: `working`, `question`, `approval`, `review`, `error`, `idle`. 
 
 ## Your coordinator agent
 
-Relay automatically chooses installed Codex, then Claude. Click the coordinator's provider button or **Settings** to choose the provider, optional model/executable, default project directory, and preferred worker agent. Sign in to the chosen CLI normally first. No extra API key is needed when that CLI already supports your account login.
+Zyi automatically chooses installed Codex, then Claude. Click the coordinator's provider button or **Settings** to choose the provider, optional model/executable, default project directory, and preferred worker agent. Sign in to the chosen CLI normally first. No extra API key is needed when that CLI already supports your account login.
 
 Try:
 
@@ -171,10 +185,10 @@ The reply dialog keeps its original target even if the selected session changes.
 - **Save output** downloads the retained terminal output; each session retains up to 250,000 characters, including terminal escape sequences.
 - Stop a session when appropriate. Its launch profile, notes, output and pending attention remain.
 - **Stop & archive** stops a running session and hides its record. **Archive session** hides an already-stopped session. Manual archiving keeps pending/deferred attention in the queue. **Show archived sessions** lets you find and restore saved sessions.
-- **Delete saved session…** is available after the process stops. Its confirmation names the session and unresolved-item count. It removes that session's Relay record, notes, attention, delivery receipts, and retained output; project files and the agent's own conversation history remain. Relay's previous-snapshot backup and coordinator chat may still contain earlier references.
+- **Delete saved session…** is available after the process stops. Its confirmation names the session and unresolved-item count. It removes that session's Zyi record, notes, attention, delivery receipts, and retained output; project files and the agent's own conversation history remain. Zyi's previous-snapshot backup and coordinator chat may still contain earlier references.
 - **Settings** can archive inactive, stopped sessions after 1–365 days. Zero disables it. It does not interrupt running processes or discard pending items.
 
-Relay cannot adopt arbitrary already-open terminal windows. Move existing work by supplying the agent's saved conversation ID/name in a new managed session. Shell state and unsaved process memory cannot be restored by reopening a transcript. Automatic knowledge extraction into `CLAUDE.md`, `AGENTS.md`, and skills is not included in 0.3.
+Zyi cannot adopt arbitrary already-open terminal windows. Move existing work by supplying the agent's saved conversation ID/name in a new managed session. Shell state and unsaved process memory cannot be restored by reopening a transcript. Automatic knowledge extraction into `CLAUDE.md`, `AGENTS.md`, and skills is not included in 0.3.
 
 ## Status and panel sizes
 
@@ -184,17 +198,17 @@ Drag the dividers beside the session list and attention queue, or between the co
 
 ## Remote server setup
 
-Install Relay alongside the agents on the server. Start it there, then forward its port:
+Install Zyi alongside the agents on the server. Start it there, then forward its port:
 
 ```sh
 ssh -N -L 8123:127.0.0.1:8123 your-user@your-server
 ```
 
-Open the server's printed launch link in your local browser, using the same forwarded port. If the port is occupied, set `RELAY_PORT` on the server and forward that same port. Relay deliberately binds to `127.0.0.1`; do not expose it publicly. SSH handles remote access. Relay is not a remote SSH-session discovery tool.
+Open the server's printed launch link in your local browser, using the same forwarded port. If the port is occupied, set `RELAY_PORT` on the server and forward that same port. Zyi deliberately binds to `127.0.0.1`; do not expose it publicly. SSH handles remote access. Zyi is not a remote SSH-session discovery tool.
 
 ## Storage, upgrades, and recovery
 
-Default state lives in `.relay/`, excluded from Git. `RELAY_DATA_DIR` selects another directory; `RELAY_PORT` selects the port.
+For source startup, default state still lives in `.relay/`, excluded from Git, so upgrades find existing sessions. `ZYI_DATA_DIR` selects another directory; `ZYI_PORT` selects the port. Legacy `RELAY_DATA_DIR`, `RELAY_PORT` and hook variables remain compatible. Desktop storage is described in [the desktop guide](docs/desktop.md).
 
 - `workspace.json`: session records, attention, notes, coordinator messages and delivery receipts.
 - `workspace.json.bak`: previous snapshot, replaced on each successful save.
@@ -203,9 +217,9 @@ Default state lives in `.relay/`, excluded from Git. `RELAY_DATA_DIR` selects an
 - `runtime.json`: current local URL and server PID. Treat it as private.
 - `claude-hooks.json`: generated hooks used only by managed Claude sessions.
 
-Output and notes can contain sensitive project material. Storage is local plaintext, not encrypted. All managed processes run as your OS user, with the same capabilities as launching them yourself. Relay is not a sandbox or multi-user security boundary.
+Output and notes can contain sensitive project material. Storage is local plaintext, not encrypted. All managed processes run as your OS user, with the same capabilities as launching them yourself. Zyi is not a sandbox or multi-user security boundary.
 
-Before upgrading, stop Relay and back up the data directory. Then:
+Before upgrading, stop Zyi and back up the data directory. Then:
 
 ```sh
 git pull --ff-only
@@ -237,9 +251,9 @@ An **optional live Codex check** uses your installed CLI/account and two small m
 npm run smoke:codex
 ```
 
-Complete Codex login and initial repository trust first. Alternatively, after reviewing this repository, `npm run smoke:codex -- --trust-project` allows that check to accept Codex's initial trust prompt for this repository. It runs with a read-only sandbox, asks for fixed responses without tool use, tests a reply through Relay's UI, and saves a screenshot/log under ignored `test-artifacts/`. It is excluded from CI and normal verification.
+Complete Codex login and initial repository trust first. Alternatively, after reviewing this repository, `npm run smoke:codex -- --trust-project` allows that check to accept Codex's initial trust prompt for this repository. It runs with a read-only sandbox, asks for fixed responses without tool use, tests a reply through Zyi's UI, and saves a screenshot/log under ignored `test-artifacts/`. It is excluded from CI and normal verification.
 
-`npm run smoke:coordinator` is another opt-in live check. It makes two coordinator requests and starts one real Codex worker with a fixed-response task. It verifies semantic session lookup, creation, initial-task delivery and the worker's response, saving `test-artifacts/coordinator-live.png` and `.log`. It requires the Relay repository to be trusted already. This worker uses normal CLI configuration and is instructed to use no tools or modify files. Neither live check runs in CI.
+`npm run smoke:coordinator` is another opt-in live check. It makes two coordinator requests and starts one real Codex worker with a fixed-response task. It verifies semantic session lookup, creation, initial-task delivery and the worker's response, saving `test-artifacts/coordinator-live.png` and `.log`. It requires the Zyi repository to be trusted already. This worker uses normal CLI configuration and is instructed to use no tools or modify files. Neither live check runs in CI.
 
 ## Troubleshooting
 
@@ -250,8 +264,8 @@ Complete Codex login and initial repository trust first. Alternatively, after re
 | Port already in use | Use the existing instance, or choose another `RELAY_PORT` **and data directory** for a separate workspace. |
 | Workspace already open | Use its current launch link. A second server cannot safely write the same workspace. |
 | Launch link required / reconnecting after restart | Open the new complete URL printed by the current server. |
-| Executable not found | Verify the CLI in the server's terminal, restart Relay after PATH changes, or enter its full executable path. |
-| Agent is asking for login/trust | Complete that agent's setup in its original terminal. Relay does not bypass agent permissions. |
+| Executable not found | Verify the CLI in the server's terminal, restart Zyi after PATH changes, or enter its full executable path. |
+| Agent is asking for login/trust | Complete that agent's setup in its original terminal. Zyi does not bypass agent permissions. |
 | Too many quiet suggestions | Increase the quiet interval, use manual mode, or wire structured events. |
 | Start opens a new conversation | Supply an explicit conversation ID or custom resume template; a retained transcript alone is not agent memory. |
 | Reply says terminal changed | Close the draft, open the current session and prepare a new one. This prevents delivery into a replacement process. |

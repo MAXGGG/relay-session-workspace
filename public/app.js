@@ -21,7 +21,9 @@ let editingId,
   manualTarget,
   notified = new Set(),
   notificationReady = false;
-let notifications = localStorage.getItem("relay-notifications") === "on";
+let notifications =
+  (window.zyiDesktop?.preferences["relay-notifications"] ??
+    localStorage.getItem("relay-notifications")) === "on";
 const kinds = {
   question: "? Question",
   approval: "! Approval needed",
@@ -149,7 +151,7 @@ function announce(data) {
     const item = fresh[0],
       session = data.state.sessions.find((s) => s.id === item.sessionId);
     const notice = new Notification(
-      `Relay · ${fresh.length} new attention item${fresh.length === 1 ? "" : "s"}`,
+      `Zyi · ${fresh.length} new attention item${fresh.length === 1 ? "" : "s"}`,
       { body: `P${item.priority} · ${session.name} · ${kinds[item.kind]}`, tag: "relay-attention" },
     );
     notice.onclick = () => {
@@ -165,7 +167,7 @@ function render(data) {
   snapshot = data;
   const state = data.state;
   announce(data);
-  document.title = `${data.queue.length ? `(${data.queue.length}) ` : ""}Relay · Your attention, in order`;
+  document.title = `${data.queue.length ? `(${data.queue.length}) ` : ""}Zyi · Your attention, in order`;
   const query = $("#session-search").value.toLowerCase(),
     archived = $("#show-archived").checked;
   const sessions = state.sessions.filter(
@@ -394,7 +396,7 @@ async function sessionAction(id, operation) {
     ).length;
     if (
       !confirm(
-        `Delete saved session “${session.name}”? This removes its Relay notes, saved output, and ${pending} unresolved attention item(s). Project files and the agent's own conversation history are kept.`,
+        `Delete saved session “${session.name}”? This removes its Zyi notes, saved output, and ${pending} unresolved attention item(s). Project files and the agent's own conversation history are kept.`,
       )
     )
       return;
@@ -718,6 +720,7 @@ $("#notifications").addEventListener("click", async () => {
     return toast("This browser does not support desktop notifications.");
   notifications = notifications ? false : (await Notification.requestPermission()) === "granted";
   localStorage.setItem("relay-notifications", notifications ? "on" : "off");
+  window.zyiDesktop?.setPreference("relay-notifications", notifications ? "on" : "off");
   notificationLabel();
   if (!notifications && Notification.permission === "denied")
     toast("Notifications are blocked in browser settings.");

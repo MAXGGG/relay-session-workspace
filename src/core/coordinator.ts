@@ -97,7 +97,7 @@ function execute(workspace: Workspace, input: string): string {
           .join("\n")
       : "No pending items. Your queue is clear.";
   }
-  return "I can navigate and organize: “next task”, “open payments”, “open task-…”, “make payments P1”, “defer 30”, “reviewed”, “status”, or “reply to payments: your message”. Reply commands prepare a draft for your review. Relay does not answer workers or execute coordinator text as shell commands.";
+  return "I can navigate and organize: “next task”, “open payments”, “open task-…”, “make payments P1”, “defer 30”, “reviewed”, “status”, or “reply to payments: your message”. Reply commands prepare a draft for your review. Zyi does not answer workers or execute coordinator text as shell commands.";
 }
 
 import { randomUUID } from "node:crypto";

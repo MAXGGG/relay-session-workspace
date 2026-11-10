@@ -1,6 +1,10 @@
 # Testing and continued development
 
-Version 0.3 adds sidebar organization/deletion, independent process indicators, panel splitters, and a real coordinator agent. The current suite has 20 unit, 26 integration, and 14 browser tests. CI uses deterministic planners and subprocess fixtures; no model calls are made. New checks cover natural-language request transport, semantic-plan application, task creation into a real PTY, request deduplication/cancellation, unknown action and project rejection, archive/delete isolation, drag ordering, keyboard/pointer resizing and layout persistence.
+Version 0.4 has 20 unit, 29 integration, 14 browser and 2 desktop acceptance tests (65 on Windows; the Windows-only shim test is skipped on other platforms). `npm run verify` covers the first three layers; build the desktop before `npm run test:desktop`. CI uses deterministic planners and subprocess fixtures; no model calls are made. Version 0.3's management, coordinator, routing and resizing coverage remains in place.
+
+Desktop tests launch the actual Electron application and its bundled Node engine. They check terminal roundtrips, renderer isolation, window hiding, second-instance focus, graceful Quit, lost-parent cleanup, saved sessions and panel preferences after restart. Packaged acceptance first copies the app outside the checkout to prevent missing dependencies from falling back to development `node_modules`. Import tests preserve pending work/output and reject live or invalid sources and occupied destinations. A missing-asset regression prevents a broken package from crashing the HTTP server after headers have been sent.
+
+`node scripts/smoke-installer.mjs` additionally tests Windows silent installation into a path containing spaces, installed-app acceptance, reinstall, uninstall and preservation of user data. It refuses to run when a Zyi installation or default user-data directory already exists; use a clean account/VM. The desktop workflow runs it after packaged tests on Windows. Mac packages are built and run natively on Apple Silicon and Intel runners; interactive Gatekeeper/notarization behavior is not proven by CI.
 
 `npm run smoke:coordinator` separately uses a real Codex coordinator to locate an existing session by task meaning, then create a worker with an initial task and observe its actual answer. It was executed successfully on Windows during 0.3 development. It makes two coordinator calls and one worker turn using the installed account; it is never included in CI. See [0.3 acceptance](release-0.3.md) for final release evidence.
 
@@ -11,7 +15,7 @@ Use Node 24+ and `npm ci`. Install Chromium once with `npm run setup:browser` (a
 | Unit | Priority/age ordering, selection without resolution, snooze/wake, ambiguity, reply drafts, per-session event deduplication, uncertainty, archive/retirement, and recovery. |
 | Integration | Snapshot/backup validation, workspace ownership, real HTTP/WebSocket/PTY routing, explicit delivery/retry/stale-target rejection, profiles and literal Windows shim arguments, retained terminal output, and twelve concurrent worker replies. |
 | Browser | Empty onboarding, custom CLI, task notes, rename/search, next/open, reviewed reply targets, classification/reopen, archive/restore, settings, reconnect, and desktop/mobile layouts. |
-| Live Codex (opt-in) | Actual installed Codex starts in a PTY, answers an initial prompt and a reply sent through Relay, survives browser reload, and reaches the generic attention queue. |
+| Live Codex (opt-in) | Actual installed Codex starts in a PTY, answers an initial prompt and a reply sent through Zyi, survives browser reload, and reaches the generic attention queue. |
 | Manual Claude | On a machine with Claude installed: start/authenticate a session, ask a question, observe hooks, answer it, review a result, stop and resume. Separate from unattended CI. |
 
 Run `npm run verify` before submitting a change. Coverage gates apply to core decision logic (90% lines/functions, 85% branches); coverage is not a claim that every integration is proven. Browser failures retain traces/screenshots. Tests use temporary directories and do not spend model tokens. GitHub Actions runs checks, tests, coverage and browser acceptance on Windows and Ubuntu.
@@ -24,7 +28,7 @@ When fixing a bug, first reproduce its observable failure with a test. Avoid sle
 
 ## Run the live Codex check
 
-After authenticating the installed CLI and trusting the Relay repository, run `npm run smoke:codex`. The optional `-- --trust-project` argument explicitly accepts the initial repository trust prompt for this test. It makes two small model requests under a read-only sandbox and asks for no tool use. It never runs in `verify` or CI. Review `test-artifacts/codex-live.png` and `.log` if it fails; these artifacts are ignored by Git.
+After authenticating the installed CLI and trusting the Zyi repository, run `npm run smoke:codex`. The optional `-- --trust-project` argument explicitly accepts the initial repository trust prompt for this test. It makes two small model requests under a read-only sandbox and asks for no tool use. It never runs in `verify` or CI. Review `test-artifacts/codex-live.png` and `.log` if it fails; these artifacts are ignored by Git.
 
 Live testing caught two bugs that mock sessions did not: replayed terminal color queries polluted agent input, and submitting Enter in the same burst as bracketed paste left a Codex message in its composer. Terminal queries now have one server-side owner; Claude/Codex paste and submission are separate and check the run ID again before Enter.
 
@@ -40,8 +44,8 @@ This checklist is not yet executed on the user's Claude machine. Automated tests
 2. Send a task in the terminal. Verify working status, then a review item when the turn stops. Opening it must not mark it handled.
 3. Trigger a structured question and a normal tool permission prompt. Check queue type, navigate from the coordinator, answer only in the terminal, and confirm no duplicate stale item remains.
 4. Run three sessions concurrently with P1/P2/P3 priorities. Confirm Next selects the intended item, defer returns at expiry, and exact task IDs route correctly.
-5. Stop and start a Claude session. Confirm it resumes the same saved conversation; quit and restart Relay and repeat. Pending items must survive.
-6. Close the browser while work runs, then reopen the launch link. Confirm the managed process continues. Stop Relay and confirm its managed terminals exit.
+5. Stop and start a Claude session. Confirm it resumes the same saved conversation; quit and restart Zyi and repeat. Pending items must survive.
+6. Close the browser while work runs, then reopen the launch link. Confirm the managed process continues. Stop Zyi and confirm its managed terminals exit.
 7. Try a known saved conversation ID from the same project. Confirm CLI resume behavior and hook settings on the installed Claude version.
 
 Record the OS, Node version, Claude version and failing event payload with sensitive content removed. Do not claim this check passed from demo tests alone.

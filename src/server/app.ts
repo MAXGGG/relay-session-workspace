@@ -33,6 +33,7 @@ export async function createApp(
   options: {
     port?: number;
     stateDir?: string;
+    assetsRoot?: string;
     demo?: boolean;
     token?: string;
     coordinatorRunner?: CoordinatorRunner;
@@ -337,7 +338,7 @@ export async function createApp(
         if (url.pathname.startsWith("/api/")) {
           if (!authorized(request, url))
             return respond(response, 401, {
-              error: "Open Relay using the launch link printed in your terminal.",
+              error: "Open Zyi using the launch link printed in your terminal.",
             });
           if (url.pathname === "/api/state" && request.method === "GET")
             return respond(response, 200, state());
@@ -697,12 +698,17 @@ export async function createApp(
           ".js": "text/javascript",
           ".css": "text/css",
         };
+        const contents = readFileSync(path.join(options.assetsRoot ?? projectRoot, asset));
         response.writeHead(200, {
           "Content-Type": `${contentType[path.extname(asset)]}; charset=utf-8`,
           "Cache-Control": "no-cache",
         });
-        response.end(readFileSync(path.join(projectRoot, asset)));
+        response.end(contents);
       } catch (error) {
+        if (response.headersSent) {
+          response.destroy();
+          return;
+        }
         respond(response, 400, {
           error: error instanceof Error ? error.message : "Request failed.",
         });

@@ -5,7 +5,9 @@
   const storageKey = "relay-layout-v1";
   let saved = {};
   try {
-    saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    saved = JSON.parse(
+      window.zyiDesktop?.preferences[storageKey] ?? localStorage.getItem(storageKey) ?? "{}",
+    );
   } catch {
     /* Reset corrupt preferences. */
   }
@@ -38,7 +40,11 @@
       handle.setAttribute("aria-valuemax", String(max));
     }
   }
-  const persist = () => localStorage.setItem(storageKey, JSON.stringify(sizes));
+  const persist = () => {
+    const value = JSON.stringify(sizes);
+    localStorage.setItem(storageKey, value);
+    window.zyiDesktop?.setPreference(storageKey, value);
+  };
   for (const [id, key, panel, axis] of [
     ["resize-sessions", "sessions", ".sessions-panel", "x"],
     ["resize-attention", "attention", ".attention-panel", "x"],

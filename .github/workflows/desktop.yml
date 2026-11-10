@@ -1,0 +1,93 @@
+name: Desktop packages
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Desktop / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: --win --x64
+            executable: release/win-unpacked/Zyi.exe
+          - os: macos-15
+            target: --mac --arm64
+            executable: release/mac-arm64/Zyi.app/Contents/MacOS/Zyi
+          - os: macos-15-intel
+            target: --mac --x64
+            executable: release/mac/Zyi.app/Contents/MacOS/Zyi
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run setup:browser
+      - run: npm run verify
+      - run: npm run package:desktop -- ${{ matrix.target }}
+      - name: Test the packaged application
+        run: npm run test:desktop
+        env:
+          ZYI_DESKTOP_EXECUTABLE: ${{ matrix.executable }}
+      - name: Test Windows install, reinstall and uninstall
+        if: runner.os == 'Windows'
+        run: node scripts/smoke-installer.mjs
+      - uses: actions/upload-artifact@v7
+        with:
+          name: zyi-${{ matrix.os }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.zip
+          if-no-files-found: error
+      - name: Preserve desktop evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: evidence-${{ matrix.os }}
+          path: |
+            test-artifacts/zyi-desktop.png
+            test-results/
+          if-no-files-found: ignore
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v6
+        with:
+          pattern: zyi-*
+          path: release-assets
+          merge-multiple: true
+      - name: Publish tested desktop preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          cd release-assets
+          sha256sum * > SHA256SUMS.txt
+          cd ..
+          gh release create "$RELEASE_TAG" release-assets/* --verify-tag --prerelease --title "Zyi $RELEASE_TAG · Desktop preview" --notes-file docs/release-notes-0.4.md

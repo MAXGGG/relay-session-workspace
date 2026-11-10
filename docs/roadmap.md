@@ -1,5 +1,9 @@
 # Development roadmap
 
+## 0.4: Zyi desktop preview
+
+Rename Relay to Zyi. Package the UI and terminal engine for Windows x64 and macOS Apple Silicon/Intel, with close-to-tray lifecycle, app-data storage, legacy import, durable preferences and tests of the actual packaged apps. See [acceptance](release-0.4.md) and [setup](desktop.md). Signed/notarized distribution and automatic updates are follow-up work.
+
 ## 0.3: daily session management and coordinator agent
 
 Sidebar actions, pinning, named groups, drag ordering, explicit deletion, process-aware status dots, and resizable panes address the first real-use feedback. Codex/Claude coordinator inference supports semantic navigation, multi-turn clarification, and creation of requested worker tasks through validated actions. See [goals and validation](release-0.3.md).

@@ -540,7 +540,7 @@ h2 {
   width: fit-content;
 }
 .message.assistant:before {
-  content: "RELAY";
+  content: "ZYI";
   font-size: 8px;
   letter-spacing: 1.2px;
   color: var(--accent);

@@ -1,4 +1,4 @@
-// A hook must never prevent the worker from progressing when Relay is unavailable.
+// A hook must never prevent the worker from progressing when Zyi is unavailable.
 import { randomUUID } from "node:crypto";
 
 try {
@@ -39,5 +39,5 @@ try {
     signal: AbortSignal.timeout(1800),
   });
 } catch {
-  /* Relay may have been closed; leave the actual Claude session alone. */
+  /* Zyi may have been closed; leave the actual Claude session alone. */
 }

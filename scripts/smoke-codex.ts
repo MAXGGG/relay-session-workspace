@@ -60,7 +60,7 @@ try {
         );
       app.terminals.write(sessionId, "\r");
       trusted = true;
-      console.log("Accepted folder trust for the Relay repository used by this check.");
+      console.log("Accepted folder trust for the Zyi repository used by this check.");
     }
     if (!app.terminals.records.has(sessionId)) throw new Error("Codex exited before answering.");
     if (Date.now() - start > 120000)

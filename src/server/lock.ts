@@ -10,7 +10,7 @@ export function acquireWorkspace(directory: string): () => void {
       pid = JSON.parse(readFileSync(file, "utf8")).pid;
     } catch {
       throw new Error(
-        `Unreadable workspace lock. Check for another Relay server before removing ${file}`,
+        `Unreadable workspace lock. Check for another Zyi server before removing ${file}`,
       );
     }
     if (!Number.isInteger(pid) || pid <= 0) throw new Error(`Invalid workspace lock: ${file}`);
@@ -22,7 +22,7 @@ export function acquireWorkspace(directory: string): () => void {
     }
     if (alive)
       throw new Error(
-        `This workspace is already open in Relay (PID ${pid}). Use its existing launch link or a different RELAY_DATA_DIR.`,
+        `This workspace is already open in Zyi (PID ${pid}). Use its existing launch link or a different RELAY_DATA_DIR.`,
       );
     unlinkSync(file);
   }
