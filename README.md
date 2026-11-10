@@ -4,7 +4,7 @@
 
 Zyi is a local application with four areas: sessions, a priority queue, an agent-backed coordinator, and the selected session's original terminal. Session management and quick actions run locally. Coordinator agent requests and workers use their respective CLI accounts and usage allowances; Zyi has no separate service fee.
 
-**Release: 0.5.0 desktop preview.** Saved group folders and reusable session templates, clearer working/priority indicators, handling of empty and long Claude completion events, and screen restoration when switching terminals. Formerly Relay, now **Zyi**, inspired by 注意 (attention). Automatic project-memory/skill extraction remains planned separately. See [0.5 goals and acceptance](docs/release-0.5.md) and [validation details](docs/testing.md).
+**Release: 0.5.1 desktop preview.** Saved group folders and reusable session templates, clearer working/priority indicators, handling of empty and long Claude completion events, and screen restoration when switching terminals. Formerly Relay, now **Zyi**, inspired by 注意 (attention). Automatic project-memory/skill extraction remains planned separately. See [0.5 goals and acceptance](docs/release-0.5.md) and [validation details](docs/testing.md).
 
 ## Desktop installation
 
@@ -12,9 +12,9 @@ Download the matching package from [GitHub Releases](https://github.com/MAXGGG/z
 
 | Computer | Download |
 | --- | --- |
-| Windows x64 | `Zyi-0.5.0-win-x64.exe` installer |
-| Mac with Apple Silicon (M1 or newer) | `Zyi-0.5.0-mac-arm64.dmg` |
-| Intel Mac | `Zyi-0.5.0-mac-x64.dmg` |
+| Windows x64 | `Zyi-0.5.1-win-x64.exe` installer |
+| Mac with Apple Silicon (M1 or newer) | `Zyi-0.5.1-mac-arm64.dmg` |
+| Intel Mac | `Zyi-0.5.1-mac-x64.dmg` |
 
 Install and open **Zyi**. Zyi includes its own Node runtime; install and authenticate your desired agent separately. Windows builds are unsigned and macOS builds are ad-hoc signed, not notarized, so this preview may trigger first-launch OS warnings. Read the [full desktop setup guide](docs/desktop.md) for installation, importing existing sessions, storage locations, upgrades and troubleshooting.
 
@@ -108,6 +108,10 @@ Click **Next task**, answer the sample question in its terminal, then mark the r
 Zyi does not create isolated Git worktrees for you. Concurrent agents editing the same repository should use separate worktrees/directories when their changes could interfere.
 
 ### Launch settings
+
+For your usual Claude permission preference, select **Claude Code** and check **Skip Claude permission prompts**. Save the settings as a template to reuse the choice. This adds `--dangerously-skip-permissions` to the saved launch arguments; the checkbox is off by default and reflects existing profiles that already contain that flag. Editing a running profile applies to its next launch.
+
+Advanced argument fields accept JSON arrays of strings, such as `["--model", "opus"]`. Leave **Custom resume arguments** empty or `[]` unless you are configuring a custom CLI's resume command. If validation fails, Zyi names and focuses the offending field. Replace the entire field contents when pasting an array; do not append it to the existing `[]`. Use straight double quotes and commas only between entries.
 
 The creation dialog separates **Create from template**, **Project folder**, and collapsed **Advanced settings**. Expand **Group and folder defaults**, enter a group name and directory, then click **Save group folder**. The group's **＋** button starts a new session in that folder. Editing the saved folder changes future launches only; existing workers keep their directory. **Forget saved folder** removes the shortcut without deleting files or sessions.
 

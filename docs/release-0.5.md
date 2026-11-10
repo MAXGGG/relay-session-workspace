@@ -1,5 +1,7 @@
 # Zyi 0.5: everyday session workflow
 
+Patch 0.5.1 adds a saved Claude permission checkbox and field-specific argument validation. Browser regressions reproduce an unexpected-comma error in the second JSON field while the first field is valid, verify invalid arrays never launch a worker, and exercise template reuse/editing of the permission choice without altering other arguments.
+
 ## Goals and acceptance
 
 1. **Reusable creation:** separate templates, saved group folders and advanced options. A group can own a folder before it has sessions. New sessions inherit that folder; changing it never relocates an existing worker. Templates exclude conversation IDs, notes and directories. Provide a native desktop directory picker and retain browser path entry.

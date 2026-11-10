@@ -599,7 +599,72 @@ function sessionModeHint() {
       : mode === "shell"
         ? "A plain shell reports process exits. Choose an agent type above for its built-in attention detection."
         : "Quiet activity is a suggestion. Structured events can be configured in Advanced settings.";
+  syncClaudePermission();
 }
+const claudeBypassFlag = "--dangerously-skip-permissions";
+function clearLaunchError() {
+  $("#dialog-error").textContent = "";
+  for (const name of ["args", "resumeArgs"])
+    $("#session-form").elements[name].removeAttribute("aria-invalid");
+}
+function readArguments(name) {
+  const field = $("#session-form").elements[name];
+  const label = name === "args" ? "Arguments (JSON array)" : "Custom resume arguments (JSON array)";
+  const fail = (message) => {
+    field.setAttribute("aria-invalid", "true");
+    for (let parent = field.parentElement; parent; parent = parent.parentElement)
+      if (parent.tagName === "DETAILS") parent.open = true;
+    field.focus();
+    throw new Error(`${label}: ${message}`);
+  };
+  let value;
+  try {
+    value = JSON.parse(field.value.trim() || "[]");
+  } catch {
+    return fail(
+      'Invalid JSON. Use straight double quotes, commas only between items, and no trailing comma or code fences. Example: ["--model", "opus"]. Leave unused fields empty or enter [].',
+    );
+  }
+  if (
+    !Array.isArray(value) ||
+    value.length > 100 ||
+    value.some((arg) => typeof arg !== "string" || arg.length > 8000 || /[\0\r\n]/.test(arg))
+  )
+    return fail(
+      'Expected an array of up to 100 single-line strings. Example: ["--model", "opus"].',
+    );
+  field.removeAttribute("aria-invalid");
+  return value;
+}
+function syncClaudePermission() {
+  const form = $("#session-form"),
+    isClaude = form.elements.mode.value === "claude";
+  $("#claude-permission-option").hidden = !isClaude;
+  let args;
+  try {
+    args = JSON.parse(form.elements.args.value || "[]");
+  } catch {
+    args = [];
+  }
+  $("#claude-skip-permissions").checked =
+    isClaude && Array.isArray(args) && args.includes(claudeBypassFlag);
+}
+$("#claude-skip-permissions").addEventListener("change", (event) => {
+  clearLaunchError();
+  try {
+    const args = readArguments("args").filter((arg) => arg !== claudeBypassFlag);
+    if (event.target.checked) args.push(claudeBypassFlag);
+    $("#session-form").elements.args.value = JSON.stringify(args);
+  } catch (error) {
+    $("#dialog-error").textContent = error.message;
+  }
+  syncClaudePermission();
+});
+for (const name of ["args", "resumeArgs"])
+  $("#session-form").elements[name].addEventListener("input", () => {
+    clearLaunchError();
+    syncClaudePermission();
+  });
 function openSessionDialog(session, group) {
   editingId = session?.id;
   const form = $("#session-form");
@@ -610,7 +675,7 @@ function openSessionDialog(session, group) {
   $("#template-picker").hidden = !!session;
   for (const id of ["#saved-folder", "#browse-folder"]) $(id).disabled = !!session;
   $("#browse-folder").hidden = !window.zyiDesktop?.chooseDirectory;
-  $("#dialog-error").textContent = "";
+  clearLaunchError();
   $("#session-dialog-title").textContent = session ? "Edit session" : "Start a session";
   $("#session-submit").textContent = session ? "Save session" : "Start session ↗";
   $("#session-dialog-hint").textContent = session
@@ -656,6 +721,15 @@ $("#edit-session").addEventListener("click", () => openSessionDialog(currentSess
 $("#close-dialog").addEventListener("click", () => $("#session-dialog").close());
 $("#session-form [name=mode]").addEventListener("change", (event) => {
   const mode = event.target.value;
+  if (mode !== "claude" && $("#claude-skip-permissions").checked) {
+    try {
+      $("#session-form").elements.args.value = JSON.stringify(
+        readArguments("args").filter((arg) => arg !== claudeBypassFlag),
+      );
+    } catch (error) {
+      $("#dialog-error").textContent = error.message;
+    }
+  }
   $("#session-form [name=attentionMode]").value =
     mode === "claude" ? "events" : mode === "shell" ? "manual" : "quiet";
   $("#session-form [name=executable]").placeholder =
@@ -664,6 +738,7 @@ $("#session-form [name=mode]").addEventListener("change", (event) => {
   sessionModeHint();
 });
 $("#session-template").addEventListener("change", () => {
+  clearLaunchError();
   const template = snapshot.state.templates?.find((t) => t.id === $("#session-template").value);
   if (template) {
     const form = $("#session-form");
@@ -714,6 +789,7 @@ $("#browse-folder").addEventListener("click", async () => {
 for (const operation of ["save-group", "forget-group", "save-template", "delete-template"]) {
   $(`#${operation}`).addEventListener("click", async () => {
     const form = $("#session-form");
+    clearLaunchError();
     try {
       let body;
       if (operation.includes("group"))
@@ -722,6 +798,8 @@ for (const operation of ["save-group", "forget-group", "save-template", "delete-
           name: form.elements.group.value,
           cwd: form.elements.cwd.value,
         };
+      else if (operation === "delete-template")
+        body = { action: operation, id: $("#session-template").value };
       else
         body = {
           ...Object.fromEntries(new FormData(form)),
@@ -729,8 +807,8 @@ for (const operation of ["save-group", "forget-group", "save-template", "delete-
           action: operation,
           id: $("#session-template").value || undefined,
           name: $("#template-name").value,
-          args: JSON.parse(form.elements.args.value || "[]"),
-          resumeArgs: JSON.parse(form.elements.resumeArgs.value || "[]"),
+          args: readArguments("args"),
+          resumeArgs: readArguments("resumeArgs"),
         };
       await api("/api/library", body);
       refreshSessionLibrary();
@@ -755,9 +833,10 @@ $("#session-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const body = Object.fromEntries(new FormData(event.target));
   $("#session-submit").disabled = true;
+  clearLaunchError();
   try {
-    body.args = JSON.parse(body.args || "[]");
-    body.resumeArgs = JSON.parse(body.resumeArgs || "[]");
+    body.args = readArguments("args");
+    body.resumeArgs = readArguments("resumeArgs");
     body.quietSeconds = Number(body.quietSeconds);
     if (editingId) {
       await api("/api/session", { ...body, sessionId: editingId, action: "update" });

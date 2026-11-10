@@ -4,7 +4,7 @@ Download the matching installer from [GitHub Releases](https://github.com/MAXGGG
 
 ## Install
 
-- **Windows x64:** run `Zyi-0.5.0-win-x64.exe`, choose the installation directory, then open Zyi from Start or its desktop shortcut. This preview has no publisher certificate; Windows may show an unknown-publisher/SmartScreen prompt. Verify the source and release checksum before proceeding.
+- **Windows x64:** run `Zyi-0.5.1-win-x64.exe`, choose the installation directory, then open Zyi from Start or its desktop shortcut. This preview has no publisher certificate; Windows may show an unknown-publisher/SmartScreen prompt. Verify the source and release checksum before proceeding.
 - **Mac with Apple Silicon (M1 or newer):** download the `mac-arm64.dmg` file.
 - **Intel Mac:** download the `mac-x64.dmg` file.
 - **macOS:** open the DMG and drag Zyi into Applications. The preview uses an ad-hoc signature, not Apple Developer ID/notarization. macOS may block the first launch. After verifying the release, use the app-specific **System Settings → Privacy & Security → Open Anyway** option if offered. Do not disable Gatekeeper globally. A ZIP is also provided for each architecture.

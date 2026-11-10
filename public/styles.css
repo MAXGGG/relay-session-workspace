@@ -1147,6 +1147,19 @@ dialog .error-text {
 #dialog-error:empty {
   display: none;
 }
+#session-form .checkbox-option {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+#session-form .checkbox-option input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--accent);
+}
+#session-form [aria-invalid="true"] {
+  border-color: #f0a3a3;
+}
 .session-card {
   position: relative;
   padding: 0;
