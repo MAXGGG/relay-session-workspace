@@ -85,7 +85,7 @@ test("profiles handle Codex and Claude resume without executing a shell command 
       ".",
       "settings",
     ).args,
-    ["--settings", "settings", "--resume", "old"],
+    ["--settings", "settings", "--name", "Test", "--resume", "old"],
   );
   assert.equal(findExecutable(process.execPath), process.execPath);
   assert.equal(findExecutable("relay-this-does-not-exist-928344"), undefined);

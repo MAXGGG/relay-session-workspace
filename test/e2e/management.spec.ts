@@ -85,7 +85,7 @@ test("sidebar offers pin, group, ordering, archive with pending work, restore an
   await page.getByLabel("Actions for Alpha").click();
   await page.getByRole("button", { name: "Rename / edit group" }).click();
   await page.getByLabel("Name", { exact: true }).fill("Alpha renamed");
-  await page.getByLabel("Group", { exact: false }).fill("Client work");
+  await page.locator("#session-form").getByLabel("Group", { exact: false }).fill("Client work");
   await page.getByRole("button", { name: "Save session" }).click();
   await page.reload();
   await expect(page.locator(".session-group h3")).toContainText(["Ungrouped", "Client work"]);

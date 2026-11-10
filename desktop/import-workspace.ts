@@ -23,7 +23,12 @@ export function importWorkspace(source: string, destination: string): number {
     if (!saved) throw new Error("No saved workspace found.");
     const store = new Store(destination);
     const current = store.load();
-    if (current?.sessions.length || current?.items.length)
+    if (
+      current?.sessions.length ||
+      current?.items.length ||
+      current?.groups?.length ||
+      current?.templates?.length
+    )
       throw new Error("Import requires an empty desktop workspace. Your existing data was kept.");
     const transcripts = new Transcripts(destination);
     for (const session of saved.sessions) {

@@ -13,7 +13,7 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/" aria-label="Zyi home"><span class="brand-mark">↗</span> Zyi <span class="version">0.4</span></a>
+    <a class="brand" href="/" aria-label="Zyi home"><span class="brand-mark">↗</span> Zyi <span class="version">0.5</span></a>
     <span class="tagline">Parallel work. One clear next step.</span>
     <div class="top-status"><button id="notifications" type="button">Notifications off</button><button id="settings" type="button">Settings</button><span id="connection" class="connection">Connecting</span><span class="local-pill">◉ Local workspace</span></div>
   </header>
@@ -57,6 +57,7 @@
       <section class="terminal-panel panel" aria-label="Session terminal">
         <div class="panel-title terminal-title"><div><span class="terminal-symbol">›_</span><h2 id="terminal-name">Select a session</h2><span id="terminal-mode" class="mode-badge"></span></div><div class="terminal-actions"><button id="edit-session" type="button">Edit</button><button id="archive-session" type="button">Archive</button><button id="start-session" type="button">Start</button><button id="stop-session" type="button">Stop</button></div></div>
         <div class="terminal-meta"><span id="terminal-path">Original session terminal</span><span id="terminal-status"></span></div>
+        <details id="claude-details" class="integration-details" hidden><summary id="claude-connection">Claude connection</summary><p id="claude-diagnostics"></p><p>Resume from the same project folder and OS account:</p><pre id="claude-resume"></pre></details>
         <div id="focus-item" class="focus-item" hidden></div>
         <div id="session-note" class="session-note" hidden></div>
         <div id="terminal" class="terminal-container"></div>
@@ -68,11 +69,17 @@
   <dialog id="session-dialog">
     <form id="session-form">
       <div class="dialog-heading"><h2 id="session-dialog-title">Start a session</h2><button id="close-dialog" type="button" aria-label="Close dialog">×</button></div>
+      <div class="session-form-body">
       <p id="session-dialog-hint">Run an installed CLI on this computer. The original terminal remains available.</p>
+      <section id="template-picker" class="form-section"><label>Create from template<select id="session-template"><option value="">Blank session</option></select></label><p class="field-hint">Reuse agent and launch settings. Each session has its own conversation.</p></section>
       <label>Name<input name="name" placeholder="e.g. Payments API" maxlength="100" required /></label>
-      <label>Group <span class="optional">optional</span><input name="group" placeholder="e.g. Work, Experiments, Client A" maxlength="60" /></label>
-      <label>Project directory<input name="cwd" placeholder="Absolute path to your project" required /></label>
+      <section class="form-section" id="session-location"><h3>Project folder</h3>
+      <label>Saved folder<select id="saved-folder"><option value="">Choose a saved or recent folder…</option></select></label>
+      <div class="folder-row"><label>Project directory<input name="cwd" placeholder="Absolute path to your project" required /></label><button id="browse-folder" type="button" hidden>Browse…</button></div>
+      <details id="group-settings"><summary>Group and folder defaults</summary><label>Group <span class="optional">optional</span><input name="group" list="saved-groups" placeholder="e.g. Work, Experiments, Client A" maxlength="60" /></label><datalist id="saved-groups"></datalist><div class="library-actions"><button id="save-group" type="button">Save group folder</button><button id="forget-group" type="button" hidden>Forget saved folder</button></div><p class="field-hint">New sessions in this group inherit its saved folder. Existing sessions keep their directory.</p></details></section>
       <div class="form-row"><label>Session type<select name="mode"><option value="shell">Shell</option><option value="codex">Codex CLI</option><option value="claude">Claude Code</option><option value="custom">Custom CLI</option></select></label><label>Priority<select name="priority"><option value="1">P1 · High</option><option value="2" selected>P2 · Normal</option><option value="3">P3 · Low</option></select></label></div>
+      <p id="agent-launch-hint" class="field-hint"></p>
+      <details id="advanced-settings"><summary>Advanced settings</summary>
       <label>Executable <span class="optional">optional except for custom CLI</span><input name="executable" placeholder="Auto-detect, or enter the executable path" /></label>
       <label>Attention detection<select name="attentionMode"><option value="manual">Manual / process exit only</option><option value="quiet">Suggest when terminal becomes quiet</option><option value="events">Structured events / hooks</option></select></label>
       <p class="field-hint">Quiet suggestions cannot tell whether an agent finished or needs input. Claude hooks report structured events.</p>
@@ -83,9 +90,12 @@
         <label>Quiet interval (seconds)<input name="quietSeconds" type="number" min="3" max="3600" value="15" /></label>
         <p class="field-hint">Claude and Codex use their resume commands. Other CLIs need a resume template. A fresh shell does not restore a conversation.</p>
       </details>
+      </details>
       <label>Task notes<textarea name="notes" rows="3" maxlength="20000" placeholder="Goal, useful findings, next step…"></textarea></label>
-      <p id="dialog-error" class="error-text" role="alert"></p>
+      <details id="template-save"><summary>Save these settings as a template</summary><label>Template name<input id="template-name" maxlength="60" placeholder="e.g. Claude · code review" /></label><p class="field-hint">Saves agent, priority, executable, arguments and detection settings. Folder, session name, notes and conversation ID are kept separate.</p><div class="library-actions"><button id="save-template" type="button">Save template</button><button id="delete-template" type="button" hidden>Delete template</button></div></details>
+      </div><div class="session-form-footer"><p id="dialog-error" class="error-text" role="alert"></p>
       <button id="session-submit" class="primary-button" type="submit">Start session ↗</button>
+      </div>
     </form>
   </dialog>
   <dialog id="reply-dialog">

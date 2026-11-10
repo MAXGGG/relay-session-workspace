@@ -61,7 +61,13 @@ async function start() {
 }
 async function importSavedWorkspace() {
   if (!window || restarting || quitting) return;
-  if (new Store(directory).load()?.sessions.length) {
+  const saved = new Store(directory).load();
+  if (
+    saved?.sessions.length ||
+    saved?.items.length ||
+    saved?.groups?.length ||
+    saved?.templates?.length
+  ) {
     reportError(
       "Workspace is not empty",
       "Import requires an empty desktop workspace. Your running sessions have been left alone.",
@@ -145,6 +151,15 @@ else {
       },
     });
     const content = window.webContents;
+    ipcMain.handle("zyi:choose-directory", async (event) => {
+      if (!window || window.isDestroyed()) return null;
+      if (event.sender !== content || !trusted(event.senderFrame?.url || "")) return null;
+      const chosen = await dialog.showOpenDialog(window, {
+        title: "Choose a project folder",
+        properties: ["openDirectory", "createDirectory"],
+      });
+      return chosen.canceled ? null : (chosen.filePaths[0] ?? null);
+    });
     const allowedKeys = new Set(["relay-layout-v1", "relay-notifications"]);
     ipcMain.on("zyi:preferences", (event) => {
       event.returnValue =

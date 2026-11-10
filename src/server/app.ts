@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import http from "node:http";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { stripVTControlCharacters } from "node:util";
@@ -23,6 +24,7 @@ import {
 import { deliverReply } from "./delivery.ts";
 import { acquireWorkspace } from "./lock.ts";
 import { argumentList, findExecutable } from "./profiles.ts";
+import { launchTemplate, libraryText } from "./session-library.ts";
 import { Store } from "./store.ts";
 import { findClaude, Terminals } from "./terminals.ts";
 import { Transcripts } from "./transcripts.ts";
@@ -67,6 +69,13 @@ export async function createApp(
         state: workspace.snapshot(),
         queue,
         claudeAvailable: Boolean(detectedClaude),
+        claudeEnvironment: {
+          configDirectory: process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude"),
+          historyDisabled: Boolean(
+            process.env.CLAUDE_CODE_SKIP_PROMPT_HISTORY &&
+              process.env.CLAUDE_CODE_SKIP_PROMPT_HISTORY !== "0",
+          ),
+        },
         executables: { claude: detectedClaude ?? null, codex: findExecutable("codex") ?? null },
         coordinator: {
           provider: coordinatorProvider(workspace.state.settings?.coordinator),
@@ -81,7 +90,7 @@ export async function createApp(
         terminals: Object.fromEntries(
           [...terminals.records].map(([id, record]) => [
             id,
-            { runId: record.runId, stopping: record.stopping },
+            { runId: record.runId, stopping: record.stopping, lastHook: record.lastHook },
           ]),
         ),
       };
@@ -237,6 +246,7 @@ export async function createApp(
         const normalize = (value: string) => normalizeText(path.resolve(value));
         const known = [
           ...workspace.state.sessions.map((s) => s.cwd),
+          ...(workspace.state.groups ?? []).map((g) => g.cwd),
           workspace.state.settings?.coordinator?.defaultCwd,
         ].filter((v): v is string => Boolean(v));
         const mentioned = workspace.state.messages
@@ -355,6 +365,38 @@ export async function createApp(
             return respond(response, 405, { error: "Use POST for this action." });
           const body = await readBody(request);
           switch (url.pathname) {
+            case "/api/library": {
+              if (body.action === "save-group") {
+                const name = libraryText(body.name, 60),
+                  cwd = libraryText(body.cwd);
+                if (!path.isAbsolute(cwd) || !existsSync(cwd) || !statSync(cwd).isDirectory())
+                  throw new Error("Choose an existing absolute project directory.");
+                const groups = workspace.state.groups ?? [];
+                if (groups.length >= 200 && !groups.some((g) => g.name === name))
+                  throw new Error("Saved folder limit reached (200).");
+                workspace.state.groups = [...groups.filter((g) => g.name !== name), { name, cwd }];
+              } else if (body.action === "delete-group") {
+                const name = libraryText(body.name, 60);
+                workspace.state.groups = (workspace.state.groups ?? []).filter(
+                  (g) => g.name !== name,
+                );
+              } else if (body.action === "save-template") {
+                const template = launchTemplate({ ...body, id: body.id || randomUUID() });
+                const templates = workspace.state.templates ?? [];
+                if (templates.length >= 100 && !templates.some((t) => t.id === template.id))
+                  throw new Error("Template limit reached (100).");
+                workspace.state.templates = [
+                  ...templates.filter((t) => t.id !== template.id),
+                  template,
+                ];
+              } else if (body.action === "delete-template") {
+                const id = libraryText(body.id, 100);
+                workspace.state.templates = (workspace.state.templates ?? []).filter(
+                  (t) => t.id !== id,
+                );
+              } else throw new Error("Unknown library action.");
+              break;
+            }
             case "/api/chat/cancel":
               coordinatorAbort?.abort();
               break;
@@ -463,7 +505,9 @@ export async function createApp(
               workspace.priority(string(body.sessionId), Number(body.priority));
               break;
             case "/api/sessions": {
-              const cwd = path.resolve(string(body.cwd, 4000));
+              const group = body.group ? singleLine(body.group, 60).trim() : "";
+              const savedFolder = workspace.state.groups?.find((g) => g.name === group)?.cwd;
+              const cwd = path.resolve(string(body.cwd || savedFolder, 4000));
               if (!existsSync(cwd) || !statSync(cwd).isDirectory())
                 throw new Error("Project directory does not exist on this computer.");
               const mode = string(body.mode) as SessionMode;
@@ -500,7 +544,7 @@ export async function createApp(
                 attentionMode,
                 quietSeconds,
                 notes: body.notes ?? "",
-                group: body.group ? singleLine(body.group, 60) : "",
+                group,
                 ...(claudeId ? { claudeId } : {}),
               });
               workspace.selectSession(session.id);
@@ -676,6 +720,8 @@ export async function createApp(
               )
                 throw new Error("Invalid question data.");
               ingestEvent(workspace, sessionId, event);
+              const record = terminals.records.get(sessionId);
+              if (record) record.lastHook = { event: event.hook_event_name, at: workspace.now() };
               break;
             }
             default:
@@ -734,6 +780,7 @@ export async function createApp(
       sockets.handleUpgrade(request, socket, head, (ws) => sockets.emit("connection", ws));
     });
     sockets.on("connection", (ws) => {
+      let attachment = 0;
       send(ws, { type: "state", ...state() });
       ws.on("close", () => selected.delete(ws));
       ws.on("error", () => selected.delete(ws));
@@ -743,7 +790,8 @@ export async function createApp(
           const id = string(message.sessionId);
           const session = workspace.session(id);
           if (message.type === "attach") {
-            selected.set(ws, id);
+            selected.delete(ws);
+            const generation = ++attachment;
             // Sample workers are safe to launch on first view. Real stopped sessions require Start.
             if (
               session.mode === "demo" &&
@@ -753,12 +801,19 @@ export async function createApp(
               session.archivedAt === undefined
             )
               startTerminal(id);
-            send(ws, {
-              type: "attached",
-              sessionId: id,
-              data: transcripts.read(id),
-              running: terminals.records.has(id),
-              runId: terminals.records.get(id)?.runId ?? null,
+            terminals.capture(id, (frame) => {
+              if (generation !== attachment || ws.readyState !== WebSocket.OPEN) return;
+              selected.set(ws, id);
+              send(ws, {
+                type: "attached",
+                sessionId: id,
+                requestId: message.requestId,
+                data: frame?.data ?? transcripts.read(id),
+                cols: frame?.cols,
+                rows: frame?.rows,
+                running: Boolean(frame),
+                runId: frame?.runId ?? null,
+              });
             });
           } else {
             if (selected.get(ws) !== id)
@@ -806,7 +861,7 @@ export async function createApp(
         "Stop",
         "StopFailure",
         "SessionEnd",
-      ].map((event) => [event, [{ hooks: [{ type: "command", command, timeout: 3 }] }]]),
+      ].map((event) => [event, [{ hooks: [{ type: "command", command, timeout: 6 }] }]]),
     );
     writeFileSync(hookConfig, JSON.stringify({ hooks }, null, 2));
     const url = `${address}/#token=${token}`;

@@ -48,7 +48,7 @@ export function launchProfile(session: Session, root: string, hookConfig: string
         : [];
   } else if (session.mode === "claude") {
     executable = session.executable || findExecutable("claude") || "claude";
-    args = ["--settings", hookConfig, ...(session.args ?? [])];
+    args = ["--settings", hookConfig, "--name", session.name, ...(session.args ?? [])];
     if (conversation) args.push("--resume", conversation);
   } else if (session.mode === "codex") {
     executable = session.executable || findExecutable("codex") || "codex";

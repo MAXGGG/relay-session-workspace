@@ -45,6 +45,7 @@ export function ingestEvent(workspace: Workspace, sessionId: string, event: Work
       session.status = "working";
       session.lastActivityAt = workspace.now();
       resolveQuestions("turn-question");
+      resolveQuestions("idle-prompt");
       break;
     case "PreToolUse":
       if (event.tool_name === "AskUserQuestion") {
@@ -70,6 +71,23 @@ export function ingestEvent(workspace: Workspace, sessionId: string, event: Work
       session.status = "working";
       break;
     case "Notification":
+      if (event.notification_type === "idle_prompt") {
+        session.status = "waiting";
+        if (
+          !workspace.state.items.some(
+            (item) => item.sessionId === sessionId && item.status !== "resolved",
+          )
+        )
+          workspace.enqueue(sessionId, {
+            kind: "activity",
+            title: "Claude is waiting for input",
+            detail:
+              text ||
+              "Claude reported an idle prompt. Check the terminal for a result or question.",
+            source: "idle-prompt",
+            confidence: "suggested",
+          });
+      }
       if (event.notification_type === "permission_prompt") {
         session.status = "waiting";
         if (
@@ -101,14 +119,14 @@ export function ingestEvent(workspace: Workspace, sessionId: string, event: Work
           item.source === "structured-question" &&
           item.status !== "resolved",
       );
-      if (text && !structured) {
+      if (!structured) {
         const question = /\?\s*$/.test(text);
         add(
           question ? "question" : "review",
-          text,
+          text || "Claude finished its turn. Open the terminal to review the result.",
           question ? "turn-question" : "turn-result",
           undefined,
-          true,
+          Boolean(text),
         );
       }
       break;

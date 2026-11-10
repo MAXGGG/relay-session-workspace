@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import type { WorkspaceState } from "../core/types.ts";
+import { validLibrary } from "./session-library.ts";
 
 export class Store {
   file: string;
@@ -51,6 +52,7 @@ export class Store {
 function validState(value: unknown): value is WorkspaceState {
   if (!value || typeof value !== "object") return false;
   const state = value as WorkspaceState;
+  if (!validLibrary(state.groups, state.templates)) return false;
   if (
     state.version !== 1 ||
     !Array.isArray(state.sessions) ||

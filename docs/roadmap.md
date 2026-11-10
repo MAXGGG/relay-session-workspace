@@ -1,5 +1,9 @@
 # Development roadmap
 
+## 0.5: reusable sessions and attention reliability
+
+Separate templates, saved group folders and advanced options. Name Claude sessions at launch, expose hook/resume diagnostics, preserve completion events with empty or large response text, clarify working/priority state, and restore the current terminal frame when switching. Document macOS folder access. See [goals and acceptance](release-0.5.md).
+
 ## 0.4: Zyi desktop preview
 
 Rename Relay to Zyi. Package the UI and terminal engine for Windows x64 and macOS Apple Silicon/Intel, with close-to-tray lifecycle, app-data storage, legacy import, durable preferences and tests of the actual packaged apps. See [acceptance](release-0.4.md) and [setup](desktop.md). Signed/notarized distribution and automatic updates are follow-up work.

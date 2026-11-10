@@ -10,6 +10,18 @@ const token = fragment.get("token") || sessionStorage.getItem("relay-token") || 
 if (token) sessionStorage.setItem("relay-token", token);
 if (fragment.has("token")) history.replaceState(null, "", location.pathname);
 let snapshot, socket, attachedId, attachedRunId, requestedId, requestedRunId;
+let attachRequest = 0,
+  terminalWrites = Promise.resolve(),
+  restoringTerminal = false;
+const writeTerminal = (data) => new Promise((resolve) => terminal.write(data, resolve));
+function queueTerminal(operation) {
+  terminalWrites = terminalWrites.then(operation).catch(() => {
+    restoringTerminal = false;
+    terminal.options.disableStdin = true;
+    requestedId = null;
+    toast("Terminal view needs to reconnect. Select the session again.");
+  });
+}
 let filter = "pending",
   lastMessages = "",
   lastFocus = "",
@@ -31,6 +43,7 @@ const kinds = {
   error: "! Needs attention",
   activity: "◷ Check activity",
 };
+const priorities = { 1: "↑ High", 2: "● Normal", 3: "↓ Low" };
 const rendered = new Map();
 function setMarkup(selector, markup) {
   const element = $(selector);
@@ -79,12 +92,12 @@ terminal.onData((data) => {
     );
 });
 terminal.onResize(({ cols, rows }) => {
-  if (attachedId && socket?.readyState === WebSocket.OPEN)
+  if (!restoringTerminal && attachedId && socket?.readyState === WebSocket.OPEN)
     socket.send(JSON.stringify({ type: "resize", sessionId: attachedId, cols, rows }));
 });
 new ResizeObserver(() => {
   try {
-    fit.fit();
+    if (!restoringTerminal) fit.fit();
   } catch {
     /* Panel temporarily hidden. */
   }
@@ -135,8 +148,9 @@ function attach(session, live) {
   attachedId = null;
   attachedRunId = null;
   terminal.options.disableStdin = true;
-  terminal.reset();
-  socket.send(JSON.stringify({ type: "attach", sessionId: session.id }));
+  socket.send(
+    JSON.stringify({ type: "attach", sessionId: session.id, requestId: ++attachRequest }),
+  );
 }
 function announce(data) {
   const fresh = data.queue.filter((item) => !notified.has(item.id));
@@ -185,11 +199,13 @@ function render(data) {
     if (!groups.has(group)) groups.set(group, []);
     groups.get(group).push(s);
   }
-  const sessionsMarkup = sessions.length
+  if (!query)
+    for (const group of state.groups ?? []) if (!groups.has(group.name)) groups.set(group.name, []);
+  const sessionsMarkup = groups.size
     ? [...groups]
         .map(
           ([group, members]) =>
-            `<div class="session-group"><h3>${esc(group)}</h3>${members
+            `<div class="session-group"><div class="group-heading"><h3>${esc(group)}</h3>${group !== "★ Pinned" ? `<button type="button" data-new-group="${esc(group === "Ungrouped" ? "" : group)}" aria-label="New session in ${esc(group)}" title="New session in this group">＋</button>` : ""}</div>${members
               .map((s) => {
                 const count = data.queue.filter((i) => i.sessionId === s.id).length;
                 const status = data.sessionStatuses?.[s.id] ?? {
@@ -200,7 +216,7 @@ function render(data) {
                 const live = data.terminals?.[s.id];
                 const menu = (action, text, disabled = false) =>
                   `<button type="button" data-session-action="${action}" ${disabled ? "disabled" : ""}>${text}</button>`;
-                return `<article class="session-card ${state.selectedSessionId === s.id ? "active" : ""}" data-session-id="${esc(s.id)}" draggable="true"><button type="button" class="session-open" data-session="${esc(s.id)}" aria-label="Open ${esc(s.name)}" aria-pressed="${state.selectedSessionId === s.id}"><span class="session-card-top"><span class="status-dot ${status.code}" data-status="${status.code}" role="img" aria-label="${esc(status.label)}" title="${esc(status.detail)}"></span><span class="session-card-name">${esc(s.name)}</span>${count ? `<span class="attention-count">${count}</span>` : ""}</span><span class="session-card-project">${esc(s.project)}</span><span class="session-card-bottom"><span>${s.archivedAt !== undefined ? "Archived" : esc(status.label)} · P${s.priority}</span><span class="sample-tag">${s.mode === "demo" ? "SAMPLE" : s.mode.toUpperCase()}</span></span></button><details class="session-menu"><summary aria-label="Actions for ${esc(s.name)}" title="Organize session">⋯</summary><div>${menu("edit", "Rename / edit group")}${menu("pin", s.pinned ? "Unpin" : "Pin to top")}${menu("up", "Move up")}${menu("down", "Move down")}${menu("stop", "Stop terminal", !live || live.stopping)}${menu(s.archivedAt !== undefined ? "restore" : live ? "stop-archive" : "archive", s.archivedAt !== undefined ? "restore" : live ? "Stop & archive" : "Archive session", live?.stopping)}${menu("delete", "Delete saved session…", !!live)}</div></details></article>`;
+                return `<article class="session-card priority-${s.priority} ${state.selectedSessionId === s.id ? "active" : ""}" data-session-id="${esc(s.id)}" draggable="true"><button type="button" class="session-open" data-session="${esc(s.id)}" aria-label="Open ${esc(s.name)}" aria-pressed="${state.selectedSessionId === s.id}"><span class="session-card-top"><span class="status-dot ${status.code}" data-status="${status.code}" role="img" aria-label="${esc(status.label)}" title="${esc(status.detail)}"></span><span class="session-card-name">${esc(s.name)}</span>${count ? `<span class="attention-count">${count}</span>` : ""}</span><span class="session-card-project">${esc(s.project)}</span><span class="session-card-bottom"><span>${s.archivedAt !== undefined ? "Archived" : esc(status.label)}</span><span class="priority-badge priority-${s.priority}" title="Priority ${s.priority}">${priorities[s.priority]}</span><span class="sample-tag">${s.mode === "demo" ? "SAMPLE" : s.mode.toUpperCase()}</span></span></button><details class="session-menu"><summary aria-label="Actions for ${esc(s.name)}" title="Organize session">⋯</summary><div>${menu("edit", "Rename / edit group")}${menu("pin", s.pinned ? "Unpin" : "Pin to top")}${menu("up", "Move up")}${menu("down", "Move down")}${menu("stop", "Stop terminal", !live || live.stopping)}${menu(s.archivedAt !== undefined ? "restore" : live ? "stop-archive" : "archive", s.archivedAt !== undefined ? "restore" : live ? "Stop & archive" : "Archive session", live?.stopping)}${menu("delete", "Delete saved session…", !!live)}</div></details></article>`;
               })
               .join("")}</div>`,
         )
@@ -223,7 +239,7 @@ function render(data) {
               : item.confidence === "suggested"
                 ? "Suggestion · verify in terminal"
                 : "Session event";
-          return `<article class="queue-card ${state.selectedItemId === item.id ? "selected" : ""}" data-item-card="${esc(item.id)}"><div class="queue-card-top"><span class="kind ${item.kind}">${kinds[item.kind]}</span><select class="priority-select" aria-label="Priority for ${esc(session.name)}" data-priority="${esc(session.id)}">${[1, 2, 3].map((p) => `<option value="${p}" ${p === item.priority ? "selected" : ""}>P${p}</option>`).join("")}</select></div><button type="button" class="queue-open" data-item="${esc(item.id)}"><strong>${esc(item.title)}</strong><span class="queue-project">${esc(session.name)} <span>↗</span></span></button><div class="queue-card-meta"><span>${source}</span><span>${age(item.createdAt)}</span></div><div class="queue-card-actions">${item.status !== "resolved" ? `<button type="button" data-resolve="${item.id}">${item.kind === "review" ? "Mark reviewed" : "Mark handled"}</button>${item.status === "snoozed" ? `<button type="button" data-reopen="${item.id}">Bring back</button>` : `<button type="button" data-defer="${item.id}">Defer 30m</button>`}` : `<button type="button" data-reopen="${item.id}">Reopen</button>`}</div></article>`;
+          return `<article class="queue-card priority-${item.priority} ${state.selectedItemId === item.id ? "selected" : ""}" data-item-card="${esc(item.id)}"><div class="queue-card-top"><span class="kind ${item.kind}">${kinds[item.kind]}</span><select class="priority-select priority-${item.priority}" aria-label="Priority for ${esc(session.name)}" data-priority="${esc(session.id)}">${[1, 2, 3].map((p) => `<option value="${p}" ${p === item.priority ? "selected" : ""}>${priorities[p]}</option>`).join("")}</select></div><button type="button" class="queue-open" data-item="${esc(item.id)}"><strong>${esc(item.title)}</strong><span class="queue-project">${esc(session.name)} <span>↗</span></span></button><div class="queue-card-meta"><span>${source}</span><span>${age(item.createdAt)}</span></div><div class="queue-card-actions">${item.status !== "resolved" ? `<button type="button" data-resolve="${item.id}">${item.kind === "review" ? "Mark reviewed" : "Mark handled"}</button>${item.status === "snoozed" ? `<button type="button" data-reopen="${item.id}">Bring back</button>` : `<button type="button" data-defer="${item.id}">Defer 30m</button>`}` : `<button type="button" data-reopen="${item.id}">Reopen</button>`}</div></article>`;
         })
         .join("")
     : `<div class="empty-queue"><strong>${filter === "pending" ? "All clear." : "Nothing here yet."}</strong>${filter === "pending" ? "New questions, results, and activity suggestions will appear here." : filter === "snoozed" ? "Deferred items return automatically." : "Handled items stay available here."}</div>`;
@@ -255,6 +271,21 @@ function render(data) {
     : "Your original terminal appears here";
   $("#terminal-path").title = session?.cwd ?? "";
   $("#terminal-status").textContent = data.sessionStatuses?.[session?.id]?.label ?? "";
+  $("#terminal-status").className = data.sessionStatuses?.[session?.id]?.code ?? "";
+  $("#claude-details").hidden = session?.mode !== "claude";
+  if (session?.mode === "claude") {
+    $("#claude-connection").textContent = live
+      ? live.lastHook
+        ? `● Claude hooks connected · ${live.lastHook.event}`
+        : "◌ Waiting for Claude hooks"
+      : "Claude resume information";
+    $("#claude-diagnostics").textContent = live?.lastHook
+      ? `Last signal: ${new Date(live.lastHook.at).toLocaleString()}. Completion creates a review item; question classification from prose is a suggestion.`
+      : "Complete Claude's startup and folder-trust prompts. If no signal appears, check /hooks in Claude, then restart the session. Choose Claude Code as the session type; running claude inside a plain Shell does not install Zyi hooks.";
+    const conversation = session.conversationId || session.claudeId;
+    $("#claude-resume").textContent =
+      `${session.cwd}\n${conversation ? (/^[\w-]+$/.test(conversation) ? `claude --resume ${conversation}` : `Conversation: ${conversation}`) : "Conversation ID will appear after Claude sends SessionStart."}\nClaude config folder: ${data.claudeEnvironment?.configDirectory ?? "default"}\n${data.claudeEnvironment?.historyDisabled ? "History is disabled by CLAUDE_CODE_SKIP_PROMPT_HISTORY. Unset it and restart Zyi to save future conversations." : "/resume filters by project. Use the same OS account and Claude config folder outside Zyi."}`;
+  }
   $("#terminal-caption").textContent =
     session?.mode === "demo"
       ? "Sample worker · no AI calls"
@@ -317,31 +348,42 @@ function connect() {
   socket.addEventListener("message", ({ data }) => {
     const message = JSON.parse(data);
     if (message.type === "state") render(message);
-    else if (message.type === "attached" && message.sessionId === requestedId) {
-      attachedId = message.sessionId;
-      attachedRunId = message.runId;
-      requestedRunId = message.runId;
-      terminal.reset();
-      terminal.write(message.data);
-      terminal.options.disableStdin = !message.running;
-      if (!message.running)
-        terminal.writeln("\r\nSession is stopped. Select Start to launch or resume it.");
-      fit.fit();
-      socket.send(
-        JSON.stringify({
-          type: "resize",
-          sessionId: attachedId,
-          cols: terminal.cols,
-          rows: terminal.rows,
-        }),
-      );
-    } else if (
-      message.type === "output" &&
-      message.sessionId === attachedId &&
-      message.runId === attachedRunId
-    )
-      terminal.write(message.data);
-    else if (message.type === "exit" && message.sessionId === attachedId) {
+    else if (message.type === "attached") {
+      queueTerminal(async () => {
+        if (message.sessionId !== requestedId || message.requestId !== attachRequest) return;
+        restoringTerminal = true;
+        terminal.reset();
+        if (message.cols && message.rows) terminal.resize(message.cols, message.rows);
+        await writeTerminal(message.data);
+        restoringTerminal = false;
+        if (message.sessionId !== requestedId || message.requestId !== attachRequest) return;
+        attachedId = message.sessionId;
+        attachedRunId = message.runId;
+        requestedRunId = message.runId;
+        terminal.options.disableStdin = !message.running;
+        if (!message.running)
+          await writeTerminal("\r\nSession is stopped. Select Start to launch or resume it.\r\n");
+        fit.fit();
+        if (socket?.readyState !== WebSocket.OPEN || message.requestId !== attachRequest) return;
+        socket.send(
+          JSON.stringify({
+            type: "resize",
+            sessionId: attachedId,
+            cols: terminal.cols,
+            rows: terminal.rows,
+          }),
+        );
+      });
+    } else if (message.type === "output") {
+      queueTerminal(() => {
+        if (
+          message.sessionId === requestedId &&
+          message.sessionId === attachedId &&
+          message.runId === attachedRunId
+        )
+          return writeTerminal(message.data);
+      });
+    } else if (message.type === "exit" && message.sessionId === attachedId) {
       terminal.options.disableStdin = true;
       terminal.writeln(`\r\n[Process exited: ${message.code}. Session record preserved.]`);
     } else if (message.type === "error") toast(message.message);
@@ -425,6 +467,10 @@ $("#sessions").addEventListener("dragstart", (event) => {
   card.classList.add("dragging");
   event.dataTransfer.setData("text/plain", draggingSession);
   event.dataTransfer.effectAllowed = "move";
+});
+$("#sessions").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-new-group]");
+  if (button) openSessionDialog(undefined, button.dataset.newGroup);
 });
 $("#sessions").addEventListener("dragover", (event) => {
   if (draggingSession && event.target.closest("[data-session-id]")) event.preventDefault();
@@ -517,10 +563,53 @@ $("#chat-form").addEventListener("submit", async (event) => {
 });
 $("#coordinator-cancel").addEventListener("click", () => action("/api/chat/cancel", {}));
 $("#coordinator-setup").addEventListener("click", () => $("#settings").click());
-function openSessionDialog(session) {
+function refreshSessionLibrary() {
+  const form = $("#session-form"),
+    selected = $("#session-template").value;
+  $("#session-template").innerHTML =
+    '<option value="">Blank session</option>' +
+    (snapshot?.state.templates ?? [])
+      .map((t) => `<option value="${esc(t.id)}">${esc(t.name)}</option>`)
+      .join("");
+  $("#session-template").value = selected;
+  const groups = snapshot?.state.groups ?? [];
+  $("#saved-groups").innerHTML = groups
+    .map((g) => `<option value="${esc(g.name)}"></option>`)
+    .join("");
+  const recents = [...new Set((snapshot?.state.sessions ?? []).map((s) => s.cwd))].filter(
+    (cwd) => !groups.some((g) => g.cwd === cwd),
+  );
+  $("#saved-folder").innerHTML =
+    '<option value="">Choose a saved or recent folder…</option>' +
+    groups
+      .map(
+        (g) =>
+          `<option value="${esc(g.cwd)}" data-group="${esc(g.name)}">${esc(g.name)} · ${esc(g.cwd)}</option>`,
+      )
+      .join("") +
+    recents.map((cwd) => `<option value="${esc(cwd)}">${esc(cwd)}</option>`).join("");
+  $("#forget-group").hidden = !groups.some((g) => g.name === form.elements.group.value);
+  $("#delete-template").hidden = !$("#session-template").value;
+}
+function sessionModeHint() {
+  const mode = $("#session-form").elements.mode.value;
+  $("#agent-launch-hint").textContent =
+    mode === "claude"
+      ? "Claude receives this session name and reports work, questions and completed turns to Zyi. Requires a current Claude Code CLI with --name support."
+      : mode === "shell"
+        ? "A plain shell reports process exits. Choose an agent type above for its built-in attention detection."
+        : "Quiet activity is a suggestion. Structured events can be configured in Advanced settings.";
+}
+function openSessionDialog(session, group) {
   editingId = session?.id;
   const form = $("#session-form");
   form.reset();
+  $("#advanced-settings").open = false;
+  $("#template-save").open = false;
+  $("#group-settings").open = !!session;
+  $("#template-picker").hidden = !!session;
+  for (const id of ["#saved-folder", "#browse-folder"]) $(id).disabled = !!session;
+  $("#browse-folder").hidden = !window.zyiDesktop?.chooseDirectory;
   $("#dialog-error").textContent = "";
   $("#session-dialog-title").textContent = session ? "Edit session" : "Start a session";
   $("#session-submit").textContent = session ? "Save session" : "Start session ↗";
@@ -548,6 +637,18 @@ function openSessionDialog(session) {
   }
   if (!session && snapshot?.state.settings?.coordinator?.defaultCwd)
     form.elements.cwd.value = snapshot.state.settings.coordinator.defaultCwd;
+  if (!session) {
+    const selected = currentSession();
+    form.elements.group.value = group ?? selected?.group ?? "";
+    const saved = snapshot?.state.groups?.find((g) => g.name === form.elements.group.value);
+    const groupMember = snapshot?.state.sessions.find((s) => s.group === group);
+    form.elements.cwd.value =
+      saved?.cwd ||
+      (group === undefined ? selected?.cwd : groupMember?.cwd) ||
+      form.elements.cwd.value;
+  }
+  refreshSessionLibrary();
+  sessionModeHint();
   $("#session-dialog").showModal();
 }
 $("#new-session").addEventListener("click", () => openSessionDialog());
@@ -559,7 +660,97 @@ $("#session-form [name=mode]").addEventListener("change", (event) => {
     mode === "claude" ? "events" : mode === "shell" ? "manual" : "quiet";
   $("#session-form [name=executable]").placeholder =
     snapshot?.executables?.[mode] || "Auto-detect, or enter the executable path";
+  if (mode === "custom") $("#advanced-settings").open = true;
+  sessionModeHint();
 });
+$("#session-template").addEventListener("change", () => {
+  const template = snapshot.state.templates?.find((t) => t.id === $("#session-template").value);
+  if (template) {
+    const form = $("#session-form");
+    for (const field of ["mode", "priority", "executable", "attentionMode", "quietSeconds"])
+      form.elements[field].value = template[field] ?? "";
+    for (const field of ["args", "resumeArgs"])
+      form.elements[field].value = JSON.stringify(template[field]);
+    $("#template-name").value = template.name;
+    $("#advanced-settings").open = template.mode === "custom";
+  } else {
+    const form = $("#session-form");
+    for (const [field, value] of Object.entries({
+      mode: "shell",
+      priority: "2",
+      executable: "",
+      attentionMode: "manual",
+      quietSeconds: "15",
+      args: "[]",
+      resumeArgs: "[]",
+    }))
+      form.elements[field].value = value;
+    $("#template-name").value = "";
+    $("#advanced-settings").open = false;
+  }
+  $("#delete-template").hidden = !template;
+  sessionModeHint();
+});
+$("#saved-folder").addEventListener("change", (event) => {
+  if (!event.target.value) return;
+  const form = $("#session-form");
+  form.elements.cwd.value = event.target.value;
+  form.elements.group.value = event.target.selectedOptions[0].dataset.group ?? "";
+  $("#forget-group").hidden = !form.elements.group.value;
+});
+$("#session-form [name=group]").addEventListener("change", (event) => {
+  const group = snapshot?.state.groups?.find((g) => g.name === event.target.value);
+  if (group && !editingId) $("#session-form").elements.cwd.value = group.cwd;
+  $("#forget-group").hidden = !group;
+});
+$("#browse-folder").addEventListener("click", async () => {
+  try {
+    const directory = await window.zyiDesktop.chooseDirectory();
+    if (directory) $("#session-form").elements.cwd.value = directory;
+  } catch (error) {
+    $("#dialog-error").textContent = error.message;
+  }
+});
+for (const operation of ["save-group", "forget-group", "save-template", "delete-template"]) {
+  $(`#${operation}`).addEventListener("click", async () => {
+    const form = $("#session-form");
+    try {
+      let body;
+      if (operation.includes("group"))
+        body = {
+          action: operation === "forget-group" ? "delete-group" : operation,
+          name: form.elements.group.value,
+          cwd: form.elements.cwd.value,
+        };
+      else
+        body = {
+          ...Object.fromEntries(new FormData(form)),
+          mode: form.elements.mode.value,
+          action: operation,
+          id: $("#session-template").value || undefined,
+          name: $("#template-name").value,
+          args: JSON.parse(form.elements.args.value || "[]"),
+          resumeArgs: JSON.parse(form.elements.resumeArgs.value || "[]"),
+        };
+      await api("/api/library", body);
+      refreshSessionLibrary();
+      if (operation === "save-template") {
+        const saved =
+          snapshot.state.templates.find((t) => t.id === body.id) ?? snapshot.state.templates.at(-1);
+        $("#session-template").value = saved.id;
+        $("#delete-template").hidden = false;
+      }
+      $("#dialog-error").textContent = "";
+      toast(
+        operation.startsWith("save")
+          ? "Saved for future sessions."
+          : "Removed from saved choices. Existing sessions are kept.",
+      );
+    } catch (error) {
+      $("#dialog-error").textContent = error.message;
+    }
+  });
+}
 $("#session-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const body = Object.fromEntries(new FormData(event.target));

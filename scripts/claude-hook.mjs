@@ -9,23 +9,26 @@ try {
   }
   const source = JSON.parse(input);
   // Forward only the fields needed by the queue, not arbitrary tool results or credentials.
-  const event = Object.fromEntries(
-    [
-      "hook_event_name",
-      "session_id",
-      "last_assistant_message",
-      "message",
-      "notification_type",
-      "tool_name",
-      "background_tasks",
-      "session_crons",
-    ]
-      .filter((key) => source[key] !== undefined)
-      .map((key) => [key, source[key]]),
-  );
-  if (source.tool_name === "AskUserQuestion") event.tool_input = source.tool_input;
+  // Bound the *encoded* payload, including Unicode and JSON escaping. The
+  // receiver accepts 64 KiB; full responses and tool payloads can be much larger.
+  const event = {};
+  for (const key of ["hook_event_name", "session_id", "notification_type", "tool_name"])
+    if (typeof source[key] === "string") event[key] = source[key].slice(0, 200);
+  for (const [key, limit] of [
+    ["last_assistant_message", 4000],
+    ["message", 2000],
+  ])
+    if (typeof source[key] === "string") event[key] = source[key].slice(0, limit);
+  for (const key of ["background_tasks", "session_crons"])
+    if (Array.isArray(source[key]) && source[key].length) event[key] = [{}];
+  if (source.tool_name === "AskUserQuestion" && Array.isArray(source.tool_input?.questions))
+    event.tool_input = {
+      questions: source.tool_input.questions.slice(0, 5).map((q) => ({
+        question: typeof q?.question === "string" ? q.question.slice(0, 500) : "",
+      })),
+    };
   event.eventId = randomUUID();
-  await fetch(process.env.RELAY_HOOK_URL, {
+  const response = await fetch(process.env.RELAY_HOOK_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -36,8 +39,13 @@ try {
       runId: process.env.RELAY_RUN_ID,
       event,
     }),
-    signal: AbortSignal.timeout(1800),
+    signal: AbortSignal.timeout(3000),
   });
+  await response.body?.cancel();
+  if (!response.ok) throw new Error("Hook was rejected");
 } catch {
-  /* Zyi may have been closed; leave the actual Claude session alone. */
+  // Report failure without exposing the token, endpoint, or conversation text.
+  process.stderr.write(
+    "[Zyi] Could not deliver session status. Check Zyi's connection indicator.\n",
+  );
 }

@@ -4,7 +4,7 @@
 
 Zyi is a local application with four areas: sessions, a priority queue, an agent-backed coordinator, and the selected session's original terminal. Session management and quick actions run locally. Coordinator agent requests and workers use their respective CLI accounts and usage allowances; Zyi has no separate service fee.
 
-**Release: 0.4.0 desktop preview.** Formerly Relay, now **Zyi**, inspired by 注意 (attention). Install it as a desktop app on Windows or macOS, with a bundled terminal engine, background operation and persistent storage. Automatic project-memory/skill extraction is planned separately. See [0.4 goals and acceptance](docs/release-0.4.md), [0.3 history](docs/release-0.3.md), and [validation details](docs/testing.md).
+**Release: 0.5.0 desktop preview.** Saved group folders and reusable session templates, clearer working/priority indicators, handling of empty and long Claude completion events, and screen restoration when switching terminals. Formerly Relay, now **Zyi**, inspired by 注意 (attention). Automatic project-memory/skill extraction remains planned separately. See [0.5 goals and acceptance](docs/release-0.5.md) and [validation details](docs/testing.md).
 
 ## Desktop installation
 
@@ -12,17 +12,20 @@ Download the matching package from [GitHub Releases](https://github.com/MAXGGG/z
 
 | Computer | Download |
 | --- | --- |
-| Windows x64 | `Zyi-0.4.0-win-x64.exe` installer |
-| Mac with Apple Silicon (M1 or newer) | `Zyi-0.4.0-mac-arm64.dmg` |
-| Intel Mac | `Zyi-0.4.0-mac-x64.dmg` |
+| Windows x64 | `Zyi-0.5.0-win-x64.exe` installer |
+| Mac with Apple Silicon (M1 or newer) | `Zyi-0.5.0-mac-arm64.dmg` |
+| Intel Mac | `Zyi-0.5.0-mac-x64.dmg` |
 
 Install and open **Zyi**. Zyi includes its own Node runtime; install and authenticate your desired agent separately. Windows builds are unsigned and macOS builds are ad-hoc signed, not notarized, so this preview may trigger first-launch OS warnings. Read the [full desktop setup guide](docs/desktop.md) for installation, importing existing sessions, storage locations, upgrades and troubleshooting.
 
 Closing the window keeps agents running in the tray/menu bar. **Quit Zyi** stops managed processes. The desktop app stores its workspace outside the installation directory. Use **Zyi → Import saved workspace…** to copy a stopped legacy `.relay` workspace into an empty desktop workspace.
 
+**macOS folder access:** projects under Documents, Desktop, Downloads or other protected locations may require permission for **Zyi**, even if Terminal already has access. Check **System Settings → Privacy & Security → Files & Folders**. If necessary, add `/Applications/Zyi.app` to **Full Disk Access**, enable it, then fully Quit and reopen Zyi. Full Disk Access is broader than a folder permission; it is not required for every project. See [setup and troubleshooting](docs/desktop.md#macos-project-folder-access).
+
 ## What works
 
 - Saved launch profiles for **Claude, Codex, Shell, and Custom CLI**; executable paths and argument arrays.
+- Reusable templates, saved folders assigned to groups, recent folders, and a native desktop folder picker. Each new session remains independent.
 - Original interactive PTYs, terminal resize, browser reconnect, and bounded output replay after server restart.
 - Separate **questions, approvals, results, errors, and uncertain activity suggestions**.
 - User-controlled P1/P2/P3 priority, oldest first within a priority; defer, bring back, classify, resolve, reopen.
@@ -106,11 +109,15 @@ Zyi does not create isolated Git worktrees for you. Concurrent agents editing th
 
 ### Launch settings
 
+The creation dialog separates **Create from template**, **Project folder**, and collapsed **Advanced settings**. Expand **Group and folder defaults**, enter a group name and directory, then click **Save group folder**. The group's **＋** button starts a new session in that folder. Editing the saved folder changes future launches only; existing workers keep their directory. **Forget saved folder** removes the shortcut without deleting files or sessions.
+
+Configure an agent once, expand **Save these settings as a template**, and save a name. The template retains mode, priority, executable, arguments, resume-argument pattern and attention settings. It excludes the actual conversation ID, session name, folder and notes. Select it under **Create from template** next time. You can update or delete the selected template without changing existing sessions.
+
 | Profile | Launch and recovery |
 | --- | --- |
 | Shell | Your system shell. You can run any installed CLI inside it. Restarting returns to a fresh shell. |
 | Codex CLI | Detects `codex`; uses `--no-daemon --no-alt-screen` so Zyi owns the process. An explicit saved conversation ID/name adds `resume <id>`. |
-| Claude Code | Detects `claude`; adds Zyi's per-launch hooks. A captured or provided conversation ID adds `--resume <id>`. Global Claude settings are unchanged. |
+| Claude Code | Detects `claude`; adds local hooks and `--name <session-name>`. A captured or provided conversation ID adds `--resume <id>`. Requires a current CLI with `--name` support. Global Claude settings are unchanged. |
 | Custom CLI | Your executable with the arguments you specify. Optional custom resume arguments replace initial arguments when a conversation ID is set. |
 
 Use **Executable** if auto-detection fails. Enter only the executable path there; put options in **Arguments**, as a JSON array. Example: `["--model", "your-model"]`. A Node worker could use executable `node` and arguments `["/absolute/path/worker.js"]`. Paths with spaces remain single arguments. Windows npm `.cmd` and `.bat` shims are supported with quoted arguments; arguments containing embedded double quotes or `%` require the native executable and are rejected for shims.
@@ -118,6 +125,8 @@ Use **Executable** if auto-detection fails. Enter only the executable path there
 Custom resume example: `["resume", "{conversationId}"]`. Zyi substitutes the saved ID into each argument. **Edit** updates names/notes immediately; launch changes take effect on the next start.
 
 ## How attention detection works
+
+For Claude, select **Claude Code** as the session type. Typing `claude` inside a plain Shell does not install Zyi's hooks. The terminal's expandable **Claude hooks** indicator shows the last signal received and resume information. **Working** pulses while a turn is reported in progress; **Needs attention** and the queue count indicate a pending decision. Earlier unreviewed results remain queued when a new turn starts. High/Normal/Low badges and colored card edges make priority visible.
 
 | Mode | What it knows | Good default |
 | --- | --- | --- |

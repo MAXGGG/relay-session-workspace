@@ -998,6 +998,155 @@ dialog .error-text {
   font-weight: 600;
   letter-spacing: 0.5px;
 }
+
+.group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.group-heading button {
+  padding: 2px 8px;
+  font-size: 18px;
+}
+.priority-badge,
+.priority-select {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 5px;
+  padding: 3px 6px;
+  white-space: nowrap;
+}
+.priority-badge.priority-1,
+.priority-select.priority-1 {
+  color: #ffc794;
+  background: #432b1d;
+}
+.priority-badge.priority-2,
+.priority-select.priority-2 {
+  color: #b9d8f2;
+  background: #213343;
+}
+.priority-badge.priority-3,
+.priority-select.priority-3 {
+  color: #b5c6ba;
+  background: #27322b;
+}
+.session-card.priority-1,
+.queue-card.priority-1 {
+  border-left: 4px solid #f7ad70;
+}
+.session-card.priority-2,
+.queue-card.priority-2 {
+  border-left: 4px solid #719bbd;
+}
+.session-card.priority-3,
+.queue-card.priority-3 {
+  border-left: 4px solid #5e7768;
+}
+.session-card-bottom {
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.status-dot.working {
+  animation: working-pulse 1.4s ease-in-out infinite;
+}
+.status-dot.ready {
+  background: #99d6a5;
+  box-shadow: 0 0 0 3px #99d6a520;
+}
+#terminal-status.working {
+  color: #99d6a5;
+}
+#terminal-status.waiting {
+  color: #ffd394;
+}
+@keyframes working-pulse {
+  50% {
+    box-shadow: 0 0 0 5px #99d6a530;
+    opacity: 0.6;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .status-dot.working {
+    animation: none;
+  }
+}
+.integration-details {
+  padding: 6px 16px;
+  color: #adbdaf;
+  font-size: 11px;
+  border-bottom: 1px solid #26332c;
+}
+.integration-details summary {
+  cursor: pointer;
+}
+.integration-details p {
+  margin: 8px 0;
+  line-height: 1.5;
+}
+.integration-details pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.form-section {
+  border: 1px solid #344139;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+}
+.form-section h3 {
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+.form-section label {
+  margin-top: 8px;
+}
+.folder-row {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+.folder-row label {
+  flex: 1;
+  min-width: 0;
+}
+.folder-row button {
+  margin-bottom: 2px;
+}
+.library-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+#session-dialog {
+  width: min(590px, 92vw);
+  padding: 0;
+  overflow: hidden;
+}
+#session-form {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+#session-form > .dialog-heading {
+  flex-shrink: 0;
+  padding: 12px 24px 0;
+}
+.session-form-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 24px 8px;
+}
+.session-form-footer {
+  flex-shrink: 0;
+  padding: 12px 24px 20px;
+  border-top: 1px solid #344139;
+}
+#dialog-error:empty {
+  display: none;
+}
 .session-card {
   position: relative;
   padding: 0;

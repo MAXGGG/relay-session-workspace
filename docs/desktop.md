@@ -4,7 +4,7 @@ Download the matching installer from [GitHub Releases](https://github.com/MAXGGG
 
 ## Install
 
-- **Windows x64:** run `Zyi-0.4.0-win-x64.exe`, choose the installation directory, then open Zyi from Start or its desktop shortcut. This preview has no publisher certificate; Windows may show an unknown-publisher/SmartScreen prompt. Verify the source and release checksum before proceeding.
+- **Windows x64:** run `Zyi-0.5.0-win-x64.exe`, choose the installation directory, then open Zyi from Start or its desktop shortcut. This preview has no publisher certificate; Windows may show an unknown-publisher/SmartScreen prompt. Verify the source and release checksum before proceeding.
 - **Mac with Apple Silicon (M1 or newer):** download the `mac-arm64.dmg` file.
 - **Intel Mac:** download the `mac-x64.dmg` file.
 - **macOS:** open the DMG and drag Zyi into Applications. The preview uses an ad-hoc signature, not Apple Developer ID/notarization. macOS may block the first launch. After verifying the release, use the app-specific **System Settings → Privacy & Security → Open Anyway** option if offered. Do not disable Gatekeeper globally. A ZIP is also provided for each architecture.
@@ -12,6 +12,20 @@ Download the matching installer from [GitHub Releases](https://github.com/MAXGGG
 Install and authenticate Claude, Codex or your preferred CLI normally. Open Zyi, select **New session**, choose a project folder and session type. Shell sessions work without an AI account. Coordinator requests use your selected CLI's account and allowance. Use **Commands only** for navigation without model calls.
 
 On macOS, Zyi reads your login shell PATH so Homebrew/nvm installations can be found. You can also specify the full agent executable path in the session dialog and coordinator Settings.
+
+## macOS project folder access
+
+macOS protects locations including Documents, Desktop and Downloads. A permission granted to Terminal does not necessarily cover Zyi. If a worker cannot list or open its project, inspect **System Settings → Privacy & Security → Files & Folders** and allow the needed location for Zyi. If that does not cover your workflow, open **Full Disk Access**, click **＋**, select `/Applications/Zyi.app`, and enable it. Fully **Quit Zyi** and reopen it before retrying. Full Disk Access grants broader access and is not a prerequisite for every folder. See Apple's [folder-access guide](https://support.apple.com/en-mt/guide/mac-help/mchld5a35146/27/mac/27) and [privacy settings](https://support.apple.com/en-lk/guide/mac-help/mchl211c911f/mac).
+
+## Claude names, attention and resume
+
+1. Use a current Claude CLI: `claude --version`; `claude --help` must include `--name`. Zyi passes your session name at launch. Renaming an already-running Zyi record applies to Claude on the next Start; use Claude's `/rename` for an immediate in-terminal change. Naming at launch is [officially supported](https://code.claude.com/docs/en/cli-reference).
+2. Choose **Claude Code**, not Shell, when creating the session. Complete Claude's authentication and folder-trust prompts. Expand **Claude hooks connected** above the terminal to inspect the last event. If it stays **Waiting for Claude hooks**, check `/hooks` inside Claude, any user/managed settings disabling hooks, and the executable path. Restart after correcting settings. Zyi does not alter global Claude settings.
+3. `Stop` events create a queue item even without response text. Long messages are excerpted to keep hook delivery within its payload limit. An `idle_prompt` notification can suggest attention when no unresolved item exists; it does not prove task success. Questions inferred from prose remain suggestions.
+4. Workers use Claude's normal local persistence. They are not launched with `--no-session-persistence`. The coordinator is a separate, intentionally ephemeral helper. Zyi shows the captured conversation ID, working directory, Claude config folder, and a direct `claude --resume <id>` command in the terminal details.
+5. If an app-created session is absent from `/resume`, use the same project directory, OS account, and `CLAUDE_CONFIG_DIR` outside Zyi. The picker filters by project; direct ID lookup is useful. Finder-launched apps may have a different environment from a shell, particularly a custom config directory set in shell startup files. Compare the directory shown in Zyi with your shell's setting. Check that `CLAUDE_CODE_SKIP_PROMPT_HISTORY` is not disabling persistence. These are troubleshooting checks, not proof of the cause on your machine. See [Claude session storage and resume](https://code.claude.com/docs/en/sessions).
+
+Do not simultaneously resume the same conversation in two independent workers. Stop its Zyi worker before continuing that conversation elsewhere. Deleting a Zyi record does not delete Claude's own history.
 
 ## Window and process lifecycle
 

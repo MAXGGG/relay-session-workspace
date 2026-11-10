@@ -26,7 +26,25 @@ test("turn question, user answer, and review are separate attention transitions"
   emit({ hook_event_name: "UserPromptSubmit" });
   assert.equal(w.queue()[0].kind, "review", "new prompts do not silently accept results");
   emit({ hook_event_name: "Stop", last_assistant_message: "" });
+  assert.equal(w.queue().length, 2);
+});
+
+test("completion without message text and idle notifications still request attention", () => {
+  const { w, session, emit } = fixture();
+  emit({ hook_event_name: "UserPromptSubmit" });
+  emit({ hook_event_name: "Stop", eventId: "empty-stop" });
   assert.equal(w.queue().length, 1);
+  assert.equal(w.queue()[0].kind, "review");
+  assert.equal(w.queue()[0].confidence, "detected");
+  assert.equal(session.status, "waiting");
+  emit({ hook_event_name: "Notification", notification_type: "idle_prompt" });
+  assert.equal(w.queue().length, 1, "idle notice must not duplicate a completion");
+  w.resolve(w.queue()[0].id);
+  emit({ hook_event_name: "Notification", notification_type: "idle_prompt" });
+  assert.equal(w.queue()[0].kind, "activity");
+  assert.equal(w.queue()[0].confidence, "suggested");
+  emit({ hook_event_name: "UserPromptSubmit" });
+  assert.equal(w.queue().length, 0);
 });
 
 test("structured questions resolve only after the question tool completes", () => {

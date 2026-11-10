@@ -57,6 +57,11 @@ test("desktop import rejects invalid source without replacing the destination", 
     writeFileSync(path.join(source, "workspace.json"), '{"sessions":[]}');
     assert.throws(() => importWorkspace(source, target), /Invalid saved workspace/);
     assert.deepEqual(new Store(target).load(), empty);
+    new Store(source).save(empty);
+    const libraryOnly = { ...empty, groups: [{ name: "Saved work", cwd: target }] };
+    new Store(target).save(libraryOnly);
+    assert.throws(() => importWorkspace(source, target), /empty desktop workspace/);
+    assert.deepEqual(new Store(target).load(), libraryOnly);
   } finally {
     removeTemporary(source);
     removeTemporary(target);

@@ -138,6 +138,7 @@ SCHEMA: ${JSON.stringify(coordinatorSchema)}
 AVAILABLE_AGENTS: ${JSON.stringify(available)}
 DEFAULTS: ${JSON.stringify(state.settings?.coordinator ?? {})}
 WORKSPACE_DATA: ${JSON.stringify({
+    groups: state.groups ?? [],
     selectedSessionId: state.selectedSessionId,
     selectedItemId: state.selectedItemId,
     sessions: state.sessions.map((s) => ({

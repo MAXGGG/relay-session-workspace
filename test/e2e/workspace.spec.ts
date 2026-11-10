@@ -74,7 +74,7 @@ test("typing into a sample terminal answers its question and creates a review it
 test("create a real shell, search it, and show clear validation for missing projects", async ({
   page,
 }) => {
-  await page.getByRole("button", { name: "New session" }).click();
+  await page.locator("#new-session").click();
   await page.getByLabel("Name", { exact: true }).fill("My shell");
   await page.getByLabel("Project directory", { exact: true }).fill("/missing-relay-project");
   await page.getByRole("button", { name: "Start session" }).click();

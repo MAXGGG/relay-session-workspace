@@ -17,7 +17,14 @@ export function sessionStatus(
       label: "Error",
       detail: "The session reported an error; its process is still running.",
     };
-  if (items.some((i) => i.sessionId === session.id && i.status === "pending"))
+  if (
+    items.some(
+      (i) =>
+        i.sessionId === session.id &&
+        i.status === "pending" &&
+        (session.status !== "working" || i.kind !== "review"),
+    )
+  )
     return {
       code: "waiting",
       label: "Needs attention",
@@ -31,6 +38,12 @@ export function sessionStatus(
         session.attentionMode === "events"
           ? "The agent reported work in progress."
           : "Terminal activity observed; this does not prove the agent is thinking.",
+    };
+  if (session.status === "waiting")
+    return {
+      code: "ready",
+      label: "Ready for input",
+      detail: "The agent finished its turn or reported an idle prompt.",
     };
   return {
     code: "running",

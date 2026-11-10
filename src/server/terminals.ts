@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import serialize from "@xterm/addon-serialize";
 import headless from "@xterm/headless";
 import * as pty from "node-pty";
 import type { Session } from "../core/types.ts";
@@ -10,8 +11,11 @@ interface TerminalRecord {
   output: string;
   finished: Promise<void>;
   stopping: boolean;
+  exited?: boolean;
   runId: string;
   screen: InstanceType<typeof headless.Terminal>;
+  lastHook?: { event: string; at: number };
+  serializer: InstanceType<typeof serialize.SerializeAddon>;
   replyPending?: boolean;
   stopTimer?: ReturnType<typeof setTimeout>;
 }
@@ -72,7 +76,14 @@ export class Terminals {
       ...(process.platform === "win32" ? { useConptyDll: true } : {}),
     });
     const finished = Promise.withResolvers<void>();
-    const screen = new headless.Terminal({ cols: 100, rows: 24, scrollback: 1000 });
+    const screen = new headless.Terminal({
+      cols: 100,
+      rows: 24,
+      scrollback: 1000,
+      allowProposedApi: true,
+    });
+    const serializer = new serialize.SerializeAddon();
+    screen.loadAddon(serializer);
     const record: TerminalRecord = {
       process: child,
       output: "",
@@ -80,6 +91,7 @@ export class Terminals {
       stopping: false,
       runId,
       screen,
+      serializer,
     };
     this.records.set(session.id, record);
     // Respond exactly once, even when no browser is attached. Replaying terminal
@@ -89,16 +101,19 @@ export class Terminals {
     });
     child.onData((data) => {
       record.output = (record.output + data).slice(-250000);
-      screen.write(data);
-      this.onData(session.id, data);
+      screen.write(data, () => this.onData(session.id, data));
     });
     child.onExit(({ exitCode }) => {
       clearTimeout(record.stopTimer);
-      screen.dispose();
-      releaseWindowsPty(child);
-      this.records.delete(session.id);
-      finished.resolve();
-      if (!this.closing) this.onExit(session.id, exitCode);
+      record.stopping = true;
+      record.exited = true;
+      screen.write("", () => {
+        screen.dispose();
+        releaseWindowsPty(child);
+        this.records.delete(session.id);
+        finished.resolve();
+        if (!this.closing) this.onExit(session.id, exitCode);
+      });
     });
     return true;
   }
@@ -127,6 +142,31 @@ export class Terminals {
   }
   output(id: string): string {
     return this.records.get(id)?.output ?? "";
+  }
+  capture(
+    id: string,
+    callback: (frame?: { data: string; cols: number; rows: number; runId: string }) => void,
+  ): void {
+    const record = this.records.get(id);
+    if (!record) {
+      callback();
+      return;
+    }
+    if (record.exited) {
+      void record.finished.then(() => callback());
+      return;
+    }
+    // Flush pending parser writes. This callback and the attach send are atomic
+    // relative to later output callbacks, so no output is duplicated or lost.
+    record.screen.write("", () => {
+      if (this.records.get(id) !== record) return callback();
+      callback({
+        data: record.serializer.serialize(),
+        cols: record.screen.cols,
+        rows: record.screen.rows,
+        runId: record.runId,
+      });
+    });
   }
   stop(id: string): void {
     const record = this.records.get(id);

@@ -23,12 +23,16 @@ The UI renders state; it cannot decide an item is complete merely because someon
 Each transmitted snapshot has a per-server instance ID and increasing revision. The browser ignores older revisions for the same instance so a delayed HTTP reply cannot overwrite a newer WebSocket update. The regression reproduces a stale Running/Stopping display after a real process exits.
 
 ## Data
+
+Version 0.5 adds optional `groups` (name and default directory) and `templates` (validated launch settings). Group updates affect future sessions, not an existing worker's cwd. Templates exclude conversation IDs, notes and project paths. `session-library.ts` validates persisted/API library entries. The coordinator sees saved group directories as user-approved choices. The desktop's narrow `chooseDirectory` IPC returns only an explicitly selected folder to the trusted renderer.
 A session has a stable Zyi ID, project directory, priority, profile (demo, shell, Claude, Codex, custom), status, notes, optional conversation ID and resume arguments. Attention has its own ID, provenance, confidence, kind, priority, state, and timestamps. Multiple items can belong to one session. Snapshot version 1 remains compatible with 0.1; new fields are optional. Process handles are never persisted. Recovery marks real sessions stopped and incomplete deliveries uncertain. Pending items remain.
 
 ## Local boundary
 Bind to 127.0.0.1 only. A random per-run capability token protects state and terminal access. Browser origins/hosts are checked, bodies and buffers are bounded, and assets are allowlisted. Run Zyi alongside its processes; an external SSH tunnel may forward the same loopback port. Managed workers inherit bridge credentials and share the OS user's authority. This is not a multi-user sandbox or a boundary against a malicious local worker.
 
 ## Terminal protocol and delivery
+
+Live attachment serializes the server's current terminal screen, including cursor/modes and scrollback. It flushes pending parser writes before switching the socket's subscription, preventing missing/duplicate output. The browser restores at the source dimensions before fitting, orders terminal writes, and checks attachment generations. This avoids reconstructing a live TUI from a truncated raw byte stream. Stopped records still show bounded transcript output. The serialization addon is bundled as a production dependency and tested outside the checkout.
 
 Each live PTY has a random run ID and a headless xterm instance. Device/cursor queries are answered once on the server, even with no UI attached. Browser xterm suppresses responses to replayed queries. Input is disabled while switching until the selected terminal acknowledges attachment. Live output includes the run ID, preventing late data from an old process entering a new view.
 

@@ -17,6 +17,7 @@ Zyi helps one person handle many independent CLI sessions: Claude, Codex, shells
 - Automated verification uses real PTYs and browser flows without paid AI calls. Live agent acceptance is opt-in.
 - Version 0.3 adds sidebar grouping, pinning, reordering and explicit deletion; process-aware status; adjustable panels; and a Codex/Claude coordinator that maps natural-language requests to validated actions and starts explicitly requested tasks.
 - Version 0.4 renames the product to Zyi and packages it as a desktop app with a bundled engine, background lifecycle, app-data storage and legacy import. See [desktop acceptance](docs/release-0.4.md).
+- Version 0.5 adds reusable launch templates, saved group folders, Claude naming and hook diagnostics, completion-delivery regressions, readable priorities and current-screen terminal restoration. See [0.5 acceptance](docs/release-0.5.md).
 
 See [0.3 acceptance](docs/release-0.3.md) and [0.2 release history](docs/release-plan.md) for development cycles and evidence.
 

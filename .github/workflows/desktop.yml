@@ -90,4 +90,4 @@ jobs:
           cd release-assets
           sha256sum * > SHA256SUMS.txt
           cd ..
-          gh release create "$RELEASE_TAG" release-assets/* --verify-tag --prerelease --title "Zyi $RELEASE_TAG · Desktop preview" --notes-file docs/release-notes-0.4.md
+          gh release create "$RELEASE_TAG" release-assets/* --verify-tag --prerelease --title "Zyi $RELEASE_TAG · Desktop preview" --notes-file docs/release-notes-0.5.md

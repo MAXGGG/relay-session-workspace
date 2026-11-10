@@ -52,6 +52,17 @@ test("desktop: bundled terminal, isolated window, background lifecycle, durable 
       return { sandbox: p.sandbox, node: p.nodeIntegration, isolation: p.contextIsolation };
     });
     assert.deepEqual(prefs, { sandbox: true, node: false, isolation: true });
+    await desktop.evaluate(({ dialog }, folder) => {
+      const original = dialog.showOpenDialog;
+      dialog.showOpenDialog = async () => {
+        dialog.showOpenDialog = original;
+        return { canceled: false, filePaths: [folder] };
+      };
+    }, directory);
+    await page.locator("#new-session").click();
+    await page.getByRole("button", { name: "Browse…", exact: true }).click();
+    await expect(page.getByLabel("Project directory", { exact: true })).toHaveValue(directory);
+    await page.getByLabel("Close dialog", { exact: true }).click();
     const runtimePath = path.join(directory, "workspace/runtime.json");
     let connection = JSON.parse(readFileSync(runtimePath, "utf8"));
     const firstAddress = connection.address;

@@ -59,10 +59,24 @@ export interface WorkspaceState {
   selectedSessionId: string | null;
   selectedItemId: string | null;
   processedEvents: string[];
+  groups?: { name: string; cwd: string }[];
+  templates?: LaunchTemplate[];
   deliveries?: Delivery[];
   settings?: { retireAfterDays: number; coordinator?: CoordinatorSettings };
   replyDraft?: { id: string; sessionId: string; text: string };
   coordinatorRequests?: { id: string; text: string; status: "running" | "done" | "failed" }[];
+}
+
+export interface LaunchTemplate {
+  id: string;
+  name: string;
+  mode: Exclude<SessionMode, "demo">;
+  priority: Priority;
+  executable?: string;
+  args: string[];
+  resumeArgs: string[];
+  attentionMode: "events" | "quiet" | "manual";
+  quietSeconds: number;
 }
 
 export interface CoordinatorSettings {

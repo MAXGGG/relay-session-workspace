@@ -90,10 +90,22 @@ test("status describes process liveness separately from reported agent activity"
   assert.equal(sessionStatus(s, live, [item]).code, "waiting");
   w.resolve(item.id);
   assert.equal(sessionStatus(s, live, [item]).code, "working");
+  const review = w.enqueue(s.id, {
+    kind: "review",
+    title: "Earlier result",
+    detail: "done",
+    source: "test",
+  });
+  assert.equal(
+    sessionStatus(s, live, [review]).code,
+    "working",
+    "an earlier result must not hide a new working turn",
+  );
   s.status = "error";
   assert.match(sessionStatus(s, live, []).detail, /still running/);
   assert.match(sessionStatus(s, undefined, []).detail, /failed/);
   s.status = "waiting";
+  assert.equal(sessionStatus(s, live, []).code, "ready");
   assert.equal(sessionStatus(s, undefined, [item]).code, "stopped");
 });
 
