@@ -18,7 +18,7 @@ Relay is now **Zyi**, inspired by 注意 (attention). The desktop product keeps 
 - Windows installer acceptance covers installation into a path with spaces, the installed app, reinstall, and uninstall that retains user data.
 - `.github/workflows/desktop.yml` runs verification, native packaging and packaged acceptance on Windows x64, macOS arm64 and macOS x64. A tag publishes only after all three succeed. No paid model calls run in these checks.
 
-Local Windows validation passed with Node 24.22.1 and Electron 45.2.3: 20 unit, 29 integration, 14 browser and 2 desktop tests, plus install/reinstall/uninstall acceptance. Core coverage remains 100% lines, 98.41% branches and 97.06% functions. Release CI provides the exact-commit evidence for native packages.
+Local Windows validation passed with Node 24.22.1 and Electron 45.2.3: 20 unit, 29 integration, 15 browser and 2 desktop tests, plus install/reinstall/uninstall acceptance. Core coverage remains 100% lines, 98.41% branches and 97.06% functions. Release CI provides the exact-commit evidence for native packages.
 
 ## Scope
 

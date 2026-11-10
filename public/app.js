@@ -164,6 +164,9 @@ function announce(data) {
   notificationReady = true;
 }
 function render(data) {
+  // HTTP replies and WebSocket events can arrive in a different order from
+  // creation. An old reply must not undo an exit, selection, or queue update.
+  if (snapshot?.instanceId === data.instanceId && data.revision < snapshot?.revision) return;
   snapshot = data;
   const state = data.state;
   announce(data);

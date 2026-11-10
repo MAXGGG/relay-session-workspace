@@ -57,9 +57,13 @@ export async function createApp(
     let address = "";
     let coordinatorAbort: AbortController | undefined;
     let coordinatorTask: Promise<void> | undefined;
+    const instanceId = randomUUID();
+    let revision = 0;
     const state = () => {
       const queue = workspace.queue();
       return {
+        instanceId,
+        revision: ++revision,
         state: workspace.snapshot(),
         queue,
         claudeAvailable: Boolean(detectedClaude),

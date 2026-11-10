@@ -1,6 +1,6 @@
 # Testing and continued development
 
-Version 0.4 has 20 unit, 29 integration, 14 browser and 2 desktop acceptance tests (65 on Windows; the Windows-only shim test is skipped on other platforms). `npm run verify` covers the first three layers; build the desktop before `npm run test:desktop`. CI uses deterministic planners and subprocess fixtures; no model calls are made. Version 0.3's management, coordinator, routing and resizing coverage remains in place.
+Version 0.4 has 20 unit, 29 integration, 15 browser and 2 desktop acceptance tests (66 on Windows; the Windows-only shim test is skipped on other platforms). `npm run verify` covers the first three layers; build the desktop before `npm run test:desktop`. CI uses deterministic planners and subprocess fixtures; no model calls are made. Version 0.3's management, coordinator, routing and resizing coverage remains in place.
 
 Desktop tests launch the actual Electron application and its bundled Node engine. They check terminal roundtrips, renderer isolation, window hiding, second-instance focus, graceful Quit, lost-parent cleanup, saved sessions and panel preferences after restart. Packaged acceptance first copies the app outside the checkout to prevent missing dependencies from falling back to development `node_modules`. Import tests preserve pending work/output and reject live or invalid sources and occupied destinations. A missing-asset regression prevents a broken package from crashing the HTTP server after headers have been sent.
 

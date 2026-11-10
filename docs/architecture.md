@@ -20,6 +20,8 @@ Version 0.3 adds `session-status.ts` for display states derived from live proces
 
 The UI renders state; it cannot decide an item is complete merely because someone opened its terminal. IDs and source request IDs keep session routing independent of mutable titles.
 
+Each transmitted snapshot has a per-server instance ID and increasing revision. The browser ignores older revisions for the same instance so a delayed HTTP reply cannot overwrite a newer WebSocket update. The regression reproduces a stale Running/Stopping display after a real process exits.
+
 ## Data
 A session has a stable Zyi ID, project directory, priority, profile (demo, shell, Claude, Codex, custom), status, notes, optional conversation ID and resume arguments. Attention has its own ID, provenance, confidence, kind, priority, state, and timestamps. Multiple items can belong to one session. Snapshot version 1 remains compatible with 0.1; new fields are optional. Process handles are never persisted. Recovery marks real sessions stopped and incomplete deliveries uncertain. Pending items remain.
 
