@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private security report
+    url: https://github.com/MAXGGG/zyi/security/advisories/new
+    about: Report exploitable vulnerabilities privately.
+  - name: Setup and troubleshooting
+    url: https://github.com/MAXGGG/zyi/blob/main/docs/desktop.md
+    about: Installation, folder permissions, Claude hooks and resume.

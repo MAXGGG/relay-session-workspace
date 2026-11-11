@@ -1,30 +1,30 @@
-# Development roadmap
+# Roadmap
 
-## 0.5: reusable sessions and attention reliability
+The [feature catalogue](features.md) owns status. This file defines order and exit criteria, not delivery promises. @MAXGGG owns prioritization. Each implementation issue needs its feature ID, owner, acceptance criteria and evidence.
 
-Separate templates, saved group folders and advanced options. Name Claude sessions at launch, expose hook/resume diagnostics, preserve completion events with empty or large response text, clarify working/priority state, and restore the current terminal frame when switching. Document macOS folder access. See [goals and acceptance](release-0.5.md).
+## Next: 0.6 reliability milestone
 
-## 0.4: Zyi desktop preview
+Improve daily reliability before broader orchestration:
+- F12/F13: diagnose Mac folder denial and establish stable signing. A successful build does not prove permission retention.
+- F14/F15: make detection capability visible and safely convert existing Shell records.
+- F17/F20: redacted diagnostics, recoverable state and migration acceptance.
+- F18: enforce the maintenance foundation.
 
-Rename Relay to Zyi. Package the UI and terminal engine for Windows x64 and macOS Apple Silicon/Intel, with close-to-tray lifecycle, app-data storage, legacy import, durable preferences and tests of the actual packaged apps. See [acceptance](release-0.4.md) and [setup](desktop.md). Signed/notarized distribution and automatic updates are follow-up work.
+Exit criteria: required CI checks pass; real Claude on Mac completes work while another session is selected and produces the correct item; stop/resume preserves the conversation; folder access survives restart and upgrade. Record exact versions and remaining limits. Signing credentials are a dependency; keep releases previews until stable-release gates are met.
 
-## 0.3: daily session management and coordinator agent
+## Later: knowledge and continuity
 
-Sidebar actions, pinning, named groups, drag ordering, explicit deletion, process-aware status dots, and resizable panes address the first real-use feedback. Codex/Claude coordinator inference supports semantic navigation, multi-turn clarification, and creation of requested worker tasks through validated actions. See [goals and validation](release-0.3.md).
+F16/F19 improve naming and project knowledge. Start extraction with reviewed proposals and rollback, before auto-apply. Failures leave sessions recoverable. This is knowledge maintenance, not model retraining.
 
-## 0.2: working local attention workspace
+## Explore after reliability
 
-Implemented agent-independent profiles, original terminals, priority inbox, explicit user replies, lifecycle/recovery, notes/search, and optional notifications. [Acceptance and iteration evidence](release-plan.md) defines the release gate. Measure manual terminal checks, missed attention, time to resume work, and review effort on real projects.
+F21–F23 cover remote access, adapters and updates. Require an architecture decision and trust-boundary review.
 
-## Next: improve evidence from real usage
+## Released history
 
-- Validate Claude hooks against the installed CLI on a Claude-equipped machine. Keep generic fallbacks truthful.
-- Add optional structured integrations when they materially reduce false or missed attention; keep terminal ownership agent-independent.
-- Improve coordinator intent handling from observed usage and evaluate ambiguous requests. Worker output and task notes remain untrusted data; natural-language plans must stay within typed application actions.
-- Consider lifecycle independence from the launch terminal, saved-conversation discovery, and remote-host connections based on actual demand. Distinguish resuming history from adopting live processes.
+- [0.5](release-0.5.md): templates, folders, naming/hooks, priorities and screen restoration; 0.5.1 adds permission UI and argument errors.
+- [0.4](release-0.4.md): desktop lifecycle and packaging.
+- [0.3](release-0.3.md): organization and coordinator.
+- [0.2](release-plan.md): agent-independent attention workspace.
 
-## P2: knowledge before retirement
-
-Schedule extraction before closing a live session. Propose reusable facts or procedures with source evidence, project scope, deduplication, and a reviewable diff. Temporary task status stays in task records. Start with review mode; later allow explicit opt-in auto-apply for trusted project paths.
-
-Bound instruction-file growth, resolve contradictions, validate skill structure, retain undoable changes, and test failure/retry, concurrent proposals, stale evidence, secret exclusion, and rollback. Retire only after the selected extraction policy succeeds or the user skips it. This is persistent knowledge management, not model retraining.
+Retain reproduction evidence. Distinguish configuration errors, unresolved reports and confirmed implementation defects. Synthetic tests alone cannot close a real-platform compatibility claim.

@@ -3,9 +3,18 @@ updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
     open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore
+    groups:
+      routine-tooling:
+        patterns: ["@types/*", "@biomejs/biome", "typescript", "yaml"]
+        update-types: [minor, patch]
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: ci

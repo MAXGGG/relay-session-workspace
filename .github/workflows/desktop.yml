@@ -12,11 +12,41 @@ permissions:
 
 concurrency:
   group: desktop-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
+  release-security:
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/security.yml
+    permissions:
+      contents: read
+      security-events: write
+  preflight:
+    name: Desktop preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run check:repo
+      - run: npm run audit:deps
+      - name: Validate release version and main ancestry
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node scripts/check-release.mjs "$RELEASE_TAG"
+          git merge-base --is-ancestor HEAD origin/main
   package:
     name: Desktop / ${{ matrix.os }}
+    needs: preflight
     strategy:
       fail-fast: false
       matrix:
@@ -35,8 +65,10 @@ jobs:
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
           cache: npm
@@ -51,43 +83,65 @@ jobs:
       - name: Test Windows install, reinstall and uninstall
         if: runner.os == 'Windows'
         run: node scripts/smoke-installer.mjs
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: zyi-${{ matrix.os }}
           path: |
             release/*.exe
             release/*.dmg
             release/*.zip
+          retention-days: 14
           if-no-files-found: error
       - name: Preserve desktop evidence
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: evidence-${{ matrix.os }}
           path: |
             test-artifacts/zyi-desktop.png
             test-results/
+          retention-days: 7
           if-no-files-found: ignore
+  required:
+    name: Desktop required
+    needs: [preflight, package]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every dependency to succeed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: node -e "if (!Object.values(JSON.parse(process.env.RESULTS)).every(j => j.result === 'success')) process.exit(1)"
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: package
+    needs: [required, release-security]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
           pattern: zyi-*
           path: release-assets
           merge-multiple: true
+      - name: Validate all release assets and generate checksums
+        id: manifest
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node scripts/check-release.mjs "$RELEASE_TAG" release-assets
       - name: Publish tested desktop preview
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
-        run: |
-          cd release-assets
-          sha256sum * > SHA256SUMS.txt
-          cd ..
-          gh release create "$RELEASE_TAG" release-assets/* --verify-tag --prerelease --title "Zyi $RELEASE_TAG · Desktop preview" --notes-file docs/release-notes-0.5.1.md
+          RELEASE_NOTES: ${{ steps.manifest.outputs.notes }}
+        run: gh release create "$RELEASE_TAG" release-assets/* --verify-tag --prerelease --title "Zyi $RELEASE_TAG · Desktop preview" --notes-file "$RELEASE_NOTES"

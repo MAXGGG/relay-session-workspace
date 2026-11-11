@@ -1,0 +1,39 @@
+name: Bug report
+description: Report reproducible behavior in Zyi.
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: "Do not paste tokens, private prompts or transcripts. Report vulnerabilities through Security → Report a vulnerability."
+  - type: input
+    id: versions
+    attributes:
+      label: Versions and installation
+      description: "Zyi, OS/version/architecture, agent CLI, installer/source; Node version for source use."
+    validations:
+      required: true
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Session configuration
+      description: "Session type, detection mode, hook health, project folder category and relevant launch flags. Redact private paths."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: "Include switching/resizing/restart/upgrade triggers and frequency."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence
+      description: "Exact error, screenshot or fixture. Does the operation work in a normal terminal?"

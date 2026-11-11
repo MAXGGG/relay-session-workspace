@@ -6,6 +6,12 @@ Zyi is a local application with four areas: sessions, a priority queue, an agent
 
 **Release: 0.5.1 desktop preview.** Saved group folders and reusable session templates, clearer working/priority indicators, handling of empty and long Claude completion events, and screen restoration when switching terminals. Formerly Relay, now **Zyi**, inspired by 注意 (attention). Automatic project-memory/skill extraction remains planned separately. See [0.5 goals and acceptance](docs/release-0.5.md) and [validation details](docs/testing.md).
 
+## Develop and maintain Zyi
+
+Start with the [feature catalogue](docs/features.md) for current capabilities and limitations, the [roadmap](docs/roadmap.md) for planned work, and [CONTRIBUTING.md](CONTRIBUTING.md) for the PR process. [Maintenance](docs/maintenance.md) defines ownership and compatibility; the [release runbook](docs/releases.md) covers validation and recovery. See [CHANGELOG.md](CHANGELOG.md) and [SECURITY.md](SECURITY.md) for changes and private vulnerability reporting.
+
+Required PR gates cover intake, repository/workflow policy, Windows/Ubuntu verification, security scans, and native Windows/Mac packaged acceptance. This engineering foundation does not remove the preview's signing and live-agent validation limitations.
+
 ## Desktop installation
 
 Download the matching package from [GitHub Releases](https://github.com/MAXGGG/zyi/releases):

@@ -9,7 +9,7 @@
     "start": "node src/server/main.ts",
     "demo": "node src/server/main.ts --demo",
     "dev": "node --watch src/server/main.ts",
-    "check": "tsc --noEmit && node --check public/app.js && node --check public/layout.js && biome check .",
+    "check": "tsc --noEmit && node --check public/app.js && node --check public/layout.js && biome check . && npm run check:repo",
     "format": "biome check --write .",
     "test": "node --test test/unit/*.test.ts test/integration/*.test.ts",
     "test:unit": "node --test test/unit/*.test.ts",
@@ -19,11 +19,14 @@
     "setup:browser": "node scripts/install-browser.mjs",
     "smoke:codex": "node scripts/smoke-codex.ts",
     "smoke:coordinator": "node scripts/smoke-coordinator.ts",
-    "verify": "npm run check && npm test && npm run test:coverage && npm run test:e2e",
+    "verify": "npm run check && npm run test:tooling && npm test && npm run test:coverage && npm run test:e2e",
     "build:desktop": "node scripts/build-desktop.mjs",
     "desktop": "npm run build:desktop && electron build/desktop-app",
     "package:desktop": "npm run build:desktop && electron-builder --config electron-builder.json --publish never",
-    "test:desktop": "node --test test/desktop/*.test.ts"
+    "test:desktop": "node --test test/desktop/*.test.ts",
+    "check:repo": "node scripts/check-repository.mjs",
+    "test:tooling": "node --test test/tooling/*.test.mjs",
+    "audit:deps": "npm audit --audit-level=high"
   },
   "dependencies": {
     "@xterm/addon-fit": "0.11.0",
@@ -43,7 +46,8 @@
     "@types/ws": "^8.18.2",
     "electron": "45.2.3",
     "electron-builder": "26.18.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "yaml": "2.9.1"
   },
   "allowScripts": {
     "node-pty@1.2.0-beta.18": true,
