@@ -23,11 +23,13 @@ function queueTerminal(operation) {
   });
 }
 let filter = "pending",
+  handledPage = 0,
   lastMessages = "",
   lastFocus = "",
   lastDraft,
   toastTimer,
   closed = false;
+const handledPageSize = 20;
 let editingId,
   replyTarget,
   manualTarget,
@@ -228,10 +230,34 @@ function render(data) {
   setMarkup("#sessions", sessionsMarkup);
   $("#pending-count").textContent = data.queue.length;
   $("#pending-tab-count").textContent = data.queue.length;
-  const items =
+  const matchingItems =
     filter === "pending"
       ? data.queue
-      : state.items.filter((i) => i.status === filter).sort((a, b) => b.createdAt - a.createdAt);
+      : state.items
+          .filter((i) => i.status === filter)
+          .sort((a, b) =>
+            filter === "resolved"
+              ? (b.resolvedAt ?? b.createdAt) - (a.resolvedAt ?? a.createdAt) ||
+                a.id.localeCompare(b.id)
+              : b.createdAt - a.createdAt,
+          );
+  const history = filter === "resolved";
+  const lastPage = Math.max(0, Math.ceil(matchingItems.length / handledPageSize) - 1);
+  if (history && handledPage > lastPage) {
+    handledPage = lastPage;
+    $("#queue").scrollTop = 0;
+  }
+  const offset = handledPage * handledPageSize;
+  const items = history ? matchingItems.slice(offset, offset + handledPageSize) : matchingItems;
+  $("#history-pagination").hidden = !history || !matchingItems.length;
+  $("#history-range").textContent =
+    history && matchingItems.length
+      ? `${offset + 1}–${offset + items.length} of ${matchingItems.length}`
+      : "";
+  $("#history-previous").disabled = handledPage === 0;
+  $("#history-next").disabled = handledPage >= lastPage;
+  $("#queue-order").textContent = history ? "Recently handled first" : "↑ Priority first";
+  $("#queue-retention").textContent = history ? "History is kept" : "Then oldest first";
   const queueMarkup = items.length
     ? items
         .map((item) => {
@@ -242,7 +268,7 @@ function render(data) {
               : item.confidence === "suggested"
                 ? "Suggestion · verify in terminal"
                 : "Session event";
-          return `<article class="queue-card priority-${esc(item.priority)} ${state.selectedItemId === item.id ? "selected" : ""}" data-item-card="${esc(item.id)}"><div class="queue-card-top"><span class="kind ${esc(item.kind)}">${esc(kinds[item.kind])}</span><select class="priority-select priority-${esc(item.priority)}" aria-label="Priority for ${esc(session.name)}" data-priority="${esc(session.id)}">${[1, 2, 3].map((p) => `<option value="${p}" ${p === item.priority ? "selected" : ""}>${priorities[p]}</option>`).join("")}</select></div><button type="button" class="queue-open" data-item="${esc(item.id)}"><strong>${esc(item.title)}</strong><span class="queue-project">${esc(session.name)} <span>↗</span></span></button><div class="queue-card-meta"><span>${source}</span><span>${age(item.createdAt)}</span></div><div class="queue-card-actions">${item.status !== "resolved" ? `<button type="button" data-resolve="${esc(item.id)}">${item.kind === "review" ? "Mark reviewed" : "Mark handled"}</button>${item.status === "snoozed" ? `<button type="button" data-reopen="${esc(item.id)}">Bring back</button>` : `<button type="button" data-defer="${esc(item.id)}">Defer 30m</button>`}` : `<button type="button" data-reopen="${esc(item.id)}">Reopen</button>`}</div></article>`;
+          return `<article class="queue-card priority-${esc(item.priority)} ${state.selectedItemId === item.id ? "selected" : ""}" data-item-card="${esc(item.id)}"><div class="queue-card-top"><span class="kind ${esc(item.kind)}">${esc(kinds[item.kind])}</span><select class="priority-select priority-${esc(item.priority)}" aria-label="Priority for ${esc(session.name)}" data-priority="${esc(session.id)}">${[1, 2, 3].map((p) => `<option value="${p}" ${p === item.priority ? "selected" : ""}>${priorities[p]}</option>`).join("")}</select></div><button type="button" class="queue-open" data-item="${esc(item.id)}"><strong>${esc(item.title)}</strong><span class="queue-project">${esc(session.name)} <span>↗</span></span></button><div class="queue-card-meta"><span>${source}</span><span>${history ? `Handled ${age(item.resolvedAt ?? item.createdAt)}` : age(item.createdAt)}</span></div><div class="queue-card-actions">${item.status !== "resolved" ? `<button type="button" data-resolve="${esc(item.id)}">${item.kind === "review" ? "Mark reviewed" : "Mark handled"}</button>${item.status === "snoozed" ? `<button type="button" data-reopen="${esc(item.id)}">Bring back</button>` : `<button type="button" data-defer="${esc(item.id)}">Defer 30m</button>`}` : `<button type="button" data-reopen="${esc(item.id)}">Reopen</button>`}</div></article>`;
         })
         .join("")
     : `<div class="empty-queue"><strong>${filter === "pending" ? "All clear." : "Nothing here yet."}</strong>${filter === "pending" ? "New questions, results, and activity suggestions will appear here." : filter === "snoozed" ? "Deferred items return automatically." : "Handled items stay available here."}</div>`;
@@ -540,12 +566,24 @@ $("#focus-item").addEventListener("change", (event) => {
 document.querySelectorAll("[data-filter]").forEach((button) => {
   button.addEventListener("click", () => {
     filter = button.dataset.filter;
+    handledPage = 0;
     document.querySelectorAll("[data-filter]").forEach((tab) => {
       tab.classList.toggle("active", tab === button);
     });
     if (snapshot) render(snapshot);
+    $("#queue").scrollTop = 0;
   });
 });
+for (const [selector, delta] of [
+  ["#history-previous", -1],
+  ["#history-next", 1],
+]) {
+  $(selector).addEventListener("click", () => {
+    handledPage = Math.max(0, handledPage + delta);
+    if (snapshot) render(snapshot);
+    $("#queue").scrollTop = 0;
+  });
+}
 document.querySelectorAll("[data-command]").forEach((button) => {
   button.addEventListener("click", () => action("/api/command", { text: button.dataset.command }));
 });

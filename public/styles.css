@@ -133,10 +133,12 @@ h2 {
   display: grid;
   grid-template-columns: 222px 332px minmax(420px, 1fr);
   height: calc(100vh - 72px);
-  min-height: 650px;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
 }
 .panel {
   min-width: 0;
+  min-height: 0;
 }
 .sessions-panel {
   border-right: 1px solid var(--line);
@@ -358,8 +360,27 @@ h2 {
 }
 .queue-list {
   flex: 1;
+  min-height: 0;
   overflow: auto;
+  overscroll-behavior-y: contain;
   padding-bottom: 15px;
+}
+.attention-panel > :not(.queue-list) {
+  flex-shrink: 0;
+}
+.history-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+}
+.history-pagination button {
+  padding: 6px;
+  font-size: 10px;
 }
 .queue-card {
   border: 1px solid var(--line);
@@ -1322,6 +1343,7 @@ dialog .error-text {
 @media (max-width: 900px) {
   .workspace {
     grid-template-columns: minmax(170px, 0.7fr) minmax(250px, 1fr);
+    grid-template-rows: none;
     height: auto;
     min-height: 0;
   }

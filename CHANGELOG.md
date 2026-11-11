@@ -4,6 +4,7 @@
 
 ## [0.5.3] - 2026-11-11
 
+- Keep the queue within the desktop window. Handled history has 20 entries per page, newest handled first, with all records retained and reopenable. Pending and Deferred scroll independently.
 - Escape snapshot metadata consistently before rendering session, queue, message and attention-detail markup. Add an adversarial browser regression.
 - Resolve CodeQL SARIF extension rules correctly so full scans report and block serious findings without a parser failure.
 - Includes the follow-up fix prepared for 0.5.2. The 0.5.2 tag was withheld from publication after its full security gate failed; no 0.5.2 installers were released.

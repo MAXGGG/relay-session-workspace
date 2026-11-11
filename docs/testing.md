@@ -12,7 +12,9 @@ SARIF tests cover CodeQL extension-rule references, legacy driver rules, mismatc
 
 ## Product validation
 
-Version 0.5.3 has 22 unit, 33 integration, 22 browser and 2 desktop acceptance tests (79 on Windows; the Windows-only shim test is skipped on other platforms), plus nine tooling-policy tests. `npm run verify` covers the first three layers and tooling; build the desktop before `npm run test:desktop`. CI uses deterministic planners and subprocess fixtures; no model calls are made. Earlier management, coordinator, routing and resizing coverage remains in place.
+Version 0.5.3 has 22 unit, 33 integration, 24 browser and 2 desktop acceptance tests (81 on Windows; the Windows-only shim test is skipped on other platforms), plus nine tooling-policy tests. `npm run verify` covers the first three layers and tooling; build the desktop before `npm run test:desktop`. CI uses deterministic planners and subprocess fixtures; no model calls are made. Earlier management, coordinator, routing and resizing coverage remains in place.
+
+Queue-history regressions reproduce the growing workspace with 61 handled records. They verify internal scrolling at desktop heights of 950, 720 and 600px, 20-item pages, handled-time ordering, last-page removal/reopen, refresh retention, live updates and a 390px stacked layout. Large Pending/Deferred lists stay complete and independently scrollable. Inspect the generated queue-history screenshots after changing layout.
 
 The 0.5.2 follow-up regression reproduces accumulated Claude review cards. A real PTY fixture invokes the shipped bridge for consecutive turns, exercises terminal typing and the Reply dialog, and verifies only the latest response remains pending while Handled history survives reload. Unit/integration cases preserve other sessions, errors, approvals, manual classifications and newer results, and reject background-only, cancelled, expired and stale-process acknowledgement. This is deterministic integration evidence, not a live Claude/macOS acceptance claim.
 
