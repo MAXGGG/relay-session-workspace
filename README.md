@@ -138,7 +138,7 @@ Custom resume example: `["resume", "{conversationId}"]`. Zyi substitutes the sav
 
 ## How attention detection works
 
-For Claude, select **Claude Code** as the session type. Typing `claude` inside a plain Shell does not install Zyi's hooks. The terminal's expandable **Claude hooks** indicator shows the last signal received and resume information. **Working** pulses while a turn is reported in progress; **Needs attention** and the queue count indicate a pending decision. A submitted terminal or Reply-dialog follow-up acknowledges earlier response cards when the same process reports its prompt event. Background events, unsent typing and viewing alone keep results pending. Errors, approvals and manually classified items still need explicit handling. High/Normal/Low badges and colored card edges make priority visible.
+For Claude, select **Claude Code** as the session type. Typing `claude` inside a plain Shell does not install Zyi's hooks. The terminal's expandable **Claude hooks** indicator shows the last signal received and resume information. Prominent state badges distinguish **Working**, **Waiting for input**, **Approval needed**, and **Ready to review**. A submitted terminal or Reply-dialog follow-up acknowledges earlier response cards when the same process reports its prompt event. Background events, unsent typing and viewing alone keep results pending. Errors, approvals and manually classified items still need explicit handling. Session card edges show state; separate High/Normal/Low badges show priority. Queue-card edges still show priority.
 
 | Mode | What it knows | Good default |
 | --- | --- | --- |
@@ -213,7 +213,20 @@ Zyi cannot adopt arbitrary already-open terminal windows. Move existing work by 
 
 ## Status and panel sizes
 
-Blue **Running** means the process is alive; green **Active/Working** means output activity or an explicit working event; amber **Needs attention** means a queued item; purple **Stopping** means shutdown is in progress; grey **Stopped** means no live process; red **Error** means a failure. Hover a dot for its explanation. A running process is not proof that an agent is thinking, and silence is not proof of completion.
+Each session has a large text/icon badge, with the same state shown in its terminal header:
+
+| State | Meaning |
+| --- | --- |
+| Blue ↻ **Working** | The agent reported work in progress. **Terminal active** instead means observed output only. Motion respects reduced-motion preferences. |
+| Amber ? **Waiting for input** | A queued question needs your answer. |
+| Purple ! **Approval needed** | A permission request needs your decision in the terminal. |
+| Green ✓ **Ready to review** | A result is waiting for review. |
+| ◇ **Check activity** | An uncertain activity suggestion; verify in the terminal. |
+| Neutral **Idle · ready** | A finished turn or idle prompt was reported, with no pending attention item. |
+| Neutral ○ **Session open** | The process is alive, but its activity is unknown. |
+| **Stopping**, **Stopped**, **Archived**, red **Error** | Process/library state or a failure. |
+
+Counts show pending attention. Earlier results remain visibly counted while a new turn is working; stopped/archived records can still have pending work. A running process is not proof that an agent is thinking, and silence is not proof of completion.
 
 Drag the dividers beside the session list and attention queue, or between the coordinator and terminal. Focus a divider and use arrow keys (Shift for larger steps); Home or double-click resets that divider. **Settings → Reset panel sizes** resets all. Sizes persist in this browser. Narrow screens stack panels and hide the vertical dividers.
 

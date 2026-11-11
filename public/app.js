@@ -139,6 +139,25 @@ function age(time) {
 function currentSession() {
   return snapshot?.state.sessions.find((s) => s.id === snapshot.state.selectedSessionId);
 }
+const stateSymbols = {
+  working: "↻",
+  running: "○",
+  ready: "Ⅱ",
+  stopping: "…",
+  stopped: "■",
+  error: "!",
+  waiting: "!",
+  question: "?",
+  approval: "!",
+  review: "✓",
+  activity: "◇",
+  archived: "▤",
+};
+function sessionStateBadge(status, count, archived, sessionId) {
+  const tone = archived ? "archived" : (status.attentionKind ?? status.code);
+  const label = archived ? "Archived" : status.label;
+  return `<span id="state-${esc(sessionId)}" class="session-state state-${esc(tone)}" data-status="${esc(status.code)}" title="${esc(status.detail)}"><span class="state-icon" aria-hidden="true">${esc(stateSymbols[tone] ?? "○")}</span><span class="state-label">${esc(label)}</span>${count ? `<span class="state-count" aria-label="${count} pending attention item${count === 1 ? "" : "s"}">${count}</span>` : ""}</span>`;
+}
 function attach(session, live) {
   if (
     socket?.readyState !== WebSocket.OPEN ||
@@ -221,7 +240,7 @@ function render(data) {
                 const live = data.terminals?.[s.id];
                 const menu = (action, text, disabled = false) =>
                   `<button type="button" data-session-action="${action}" ${disabled ? "disabled" : ""}>${text}</button>`;
-                return `<article class="session-card priority-${esc(s.priority)} ${state.selectedSessionId === s.id ? "active" : ""}" data-session-id="${esc(s.id)}" draggable="true"><button type="button" class="session-open" data-session="${esc(s.id)}" aria-label="Open ${esc(s.name)}" aria-pressed="${state.selectedSessionId === s.id}"><span class="session-card-top"><span class="status-dot ${esc(status.code)}" data-status="${esc(status.code)}" role="img" aria-label="${esc(status.label)}" title="${esc(status.detail)}"></span><span class="session-card-name">${esc(s.name)}</span>${count ? `<span class="attention-count">${count}</span>` : ""}</span><span class="session-card-project">${esc(s.project)}</span><span class="session-card-bottom"><span>${s.archivedAt !== undefined ? "Archived" : esc(status.label)}</span><span class="priority-badge priority-${esc(s.priority)}" title="Priority ${esc(s.priority)}">${esc(priorities[s.priority])}</span><span class="sample-tag">${s.mode === "demo" ? "SAMPLE" : esc(s.mode.toUpperCase())}</span></span></button><details class="session-menu"><summary aria-label="Actions for ${esc(s.name)}" title="Organize session">⋯</summary><div>${menu("edit", "Rename / edit group")}${menu("pin", s.pinned ? "Unpin" : "Pin to top")}${menu("up", "Move up")}${menu("down", "Move down")}${menu("stop", "Stop terminal", !live || live.stopping)}${menu(s.archivedAt !== undefined ? "restore" : live ? "stop-archive" : "archive", s.archivedAt !== undefined ? "restore" : live ? "Stop & archive" : "Archive session", live?.stopping)}${menu("delete", "Delete saved session…", !!live)}</div></details></article>`;
+                return `<article class="session-card priority-${esc(s.priority)} ${state.selectedSessionId === s.id ? "active" : ""}" data-session-id="${esc(s.id)}" data-state="${esc(s.archivedAt !== undefined ? "archived" : (status.attentionKind ?? status.code))}" draggable="true"><button type="button" class="session-open" data-session="${esc(s.id)}" aria-label="Open ${esc(s.name)}" aria-pressed="${state.selectedSessionId === s.id}" aria-describedby="state-${esc(s.id)}"><span class="session-card-top"><span class="session-card-name">${esc(s.name)}</span></span><span class="session-card-project">${esc(s.project)}</span>${sessionStateBadge(status, count, s.archivedAt !== undefined, s.id)}${count && status.code !== "waiting" ? `<span class="session-pending-note">${count} pending attention item${count === 1 ? "" : "s"}</span>` : ""}<span class="session-card-bottom"><span class="priority-badge priority-${esc(s.priority)}" title="Priority ${esc(s.priority)}">${esc(priorities[s.priority])}</span><span class="sample-tag">${s.mode === "demo" ? "SAMPLE" : esc(s.mode.toUpperCase())}</span></span></button><details class="session-menu"><summary aria-label="Actions for ${esc(s.name)}" title="Organize session">⋯</summary><div>${menu("edit", "Rename / edit group")}${menu("pin", s.pinned ? "Unpin" : "Pin to top")}${menu("up", "Move up")}${menu("down", "Move down")}${menu("stop", "Stop terminal", !live || live.stopping)}${menu(s.archivedAt !== undefined ? "restore" : live ? "stop-archive" : "archive", s.archivedAt !== undefined ? "restore" : live ? "Stop & archive" : "Archive session", live?.stopping)}${menu("delete", "Delete saved session…", !!live)}</div></details></article>`;
               })
               .join("")}</div>`,
         )
@@ -301,8 +320,13 @@ function render(data) {
     ? `${session.project} / ${session.id}`
     : "Your original terminal appears here";
   $("#terminal-path").title = session?.cwd ?? "";
-  $("#terminal-status").textContent = data.sessionStatuses?.[session?.id]?.label ?? "";
-  $("#terminal-status").className = data.sessionStatuses?.[session?.id]?.code ?? "";
+  const terminalStatus = data.sessionStatuses?.[session?.id];
+  const terminalTone = terminalStatus?.attentionKind ?? terminalStatus?.code;
+  $("#terminal-status").textContent = terminalStatus?.label ?? "";
+  $("#terminal-status").className = terminalStatus ? `session-state state-${terminalTone}` : "";
+  $("#terminal-status").dataset.symbol = stateSymbols[terminalTone] ?? "";
+  $("#terminal-status").title = terminalStatus?.detail ?? "";
+  $("#terminal-status").setAttribute("aria-label", terminalStatus?.label ?? "");
   $("#claude-details").hidden = session?.mode !== "claude";
   if (session?.mode === "claude") {
     $("#claude-connection").textContent = live

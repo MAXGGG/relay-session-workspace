@@ -29,6 +29,7 @@ test("snapshot metadata and model text render literally without injecting markup
     data.state.sessions[0].name = attack;
     data.state.sessions[0].priority = attack;
     data.sessionStatuses[session.id].code = attack;
+    data.sessionStatuses[session.id].attentionKind = attack;
     data.state.messages = [{ role: attack, text: attack, at: Date.now() }];
     for (const entry of [data.state.items[0], data.queue[0]]) {
       entry.id = attack;

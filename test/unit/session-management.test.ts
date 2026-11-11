@@ -83,7 +83,7 @@ test("status describes process liveness separately from reported agent activity"
   assert.equal(sessionStatus(s, live, []).code, "running");
   assert.equal(sessionStatus(s, { stopping: true }, []).code, "stopping");
   s.status = "working";
-  assert.equal(sessionStatus(s, live, []).label, "Active");
+  assert.equal(sessionStatus(s, live, []).label, "Terminal active");
   s.attentionMode = "events";
   assert.equal(sessionStatus(s, live, []).label, "Working");
   const item = w.enqueue(s.id, { kind: "question", title: "Input", detail: "?", source: "test" });
@@ -107,6 +107,61 @@ test("status describes process liveness separately from reported agent activity"
   s.status = "waiting";
   assert.equal(sessionStatus(s, live, []).code, "ready");
   assert.equal(sessionStatus(s, undefined, [item]).code, "stopped");
+});
+
+test("status names the human action and preserves working, deferred and other-session distinctions", () => {
+  const w = new Workspace();
+  const s = w.addSession({
+    name: "Agent",
+    project: "repo",
+    cwd: ".",
+    mode: "claude",
+    attentionMode: "events",
+  });
+  const other = w.addSession({ name: "Other", project: "repo", cwd: ".", mode: "shell" });
+  const live = { stopping: false };
+  assert.equal(sessionStatus(s, live, []).label, "Session open");
+  const labels = {
+    question: "Waiting for input",
+    approval: "Approval needed",
+    review: "Ready to review",
+    activity: "Check activity",
+    error: "Error needs attention",
+  } as const;
+  for (const [kind, label] of Object.entries(labels)) {
+    const item = w.enqueue(s.id, {
+      kind: kind as keyof typeof labels,
+      title: label,
+      detail: label,
+      source: "test",
+    });
+    assert.equal(sessionStatus(s, live, w.state.items).label, label);
+    assert.equal(sessionStatus(s, live, w.state.items).attentionKind, kind);
+    assert.equal(sessionStatus(other, live, w.state.items).label, "Session open");
+    w.snooze(item.id);
+    assert.equal(sessionStatus(s, live, w.state.items).label, "Session open");
+  }
+  const review = w.enqueue(s.id, {
+    kind: "review",
+    title: "Result",
+    detail: "done",
+    source: "test",
+  });
+  const approval = w.enqueue(s.id, {
+    kind: "approval",
+    title: "Permission",
+    detail: "Decide",
+    source: "test",
+  });
+  assert.equal(sessionStatus(s, live, w.state.items).label, "Approval needed");
+  assert.equal(w.state.items.at(-2)?.id, review.id, "presentation does not reorder saved items");
+  w.resolve(approval.id);
+  assert.equal(sessionStatus(s, live, w.state.items).label, "Ready to review");
+  s.status = "working";
+  assert.equal(sessionStatus(s, live, w.state.items).label, "Working");
+  w.resolve(review.id);
+  s.status = "waiting";
+  assert.equal(sessionStatus(s, live, w.state.items).label, "Idle · ready");
 });
 
 test("coordinator settings survive retirement changes and interrupted requests are not retried", () => {

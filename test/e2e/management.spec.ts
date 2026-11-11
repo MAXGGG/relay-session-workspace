@@ -118,15 +118,15 @@ test("a live generic CLI shows running, attention, and stopped with distinct sta
   app,
 }) => {
   const id = await worker(app, "Status check");
-  const dot = page.locator(`[data-session-id="${id}"] .status-dot`);
-  await expect(dot).toHaveAttribute("aria-label", "Running");
-  const runningColor = await dot.evaluate((element) => getComputedStyle(element).backgroundColor);
+  const badge = page.locator(`[data-session-id="${id}"] .session-state`);
+  await expect(badge.locator(".state-label")).toHaveText("Session open");
+  const runningColor = await badge.evaluate((element) => getComputedStyle(element).backgroundColor);
   await app.request("/api/attention", { sessionId: id, kind: "question", text: "Need input" });
-  await expect(dot).toHaveAttribute("aria-label", "Needs attention");
+  await expect(badge.locator(".state-label")).toHaveText("Waiting for input");
   await page.getByLabel("Actions for Status check").click();
   await page.getByRole("button", { name: "Stop terminal", exact: true }).click();
-  await expect(dot).toHaveAttribute("aria-label", "Stopped");
-  const stoppedColor = await dot.evaluate((element) => getComputedStyle(element).backgroundColor);
+  await expect(badge.locator(".state-label")).toHaveText("Stopped");
+  const stoppedColor = await badge.evaluate((element) => getComputedStyle(element).backgroundColor);
   expect(stoppedColor).not.toEqual(runningColor);
 });
 

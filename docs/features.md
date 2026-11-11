@@ -16,7 +16,7 @@ This is the inventory of current and proposed behavior. The [roadmap](roadmap.md
 | F06 | Groups, pins, order, search, notes, archive/restore/deletion | Shipped | [Management](../test/e2e/management.spec.ts). Automatic retirement only archives stopped sessions without pending work. |
 | F07 | Templates, group folders and Claude permission preference | Shipped | [Library](../test/e2e/session-library.spec.ts), [launch options](../test/e2e/launch-options.spec.ts). Templates exclude conversation IDs and notes. |
 | F08 | Claude name and conversation resume | Partial | [Profiles](../test/integration/profiles.test.ts). Launch-only naming; no live rename sync. Shell records have no automatic Claude ID capture. |
-| F09 | Terminal screen restoration and panel resizing | Shipped | [Screen replay](../test/integration/terminal-screen.test.ts), [browser acceptance](../test/e2e/release.spec.ts). Stopped output is bounded. |
+| F09 | Terminal screen restoration, panel resizing and visible session states | Shipped | [Screen replay](../test/integration/terminal-screen.test.ts), [browser acceptance](../test/e2e/release.spec.ts), [state badges](../test/e2e/session-states.spec.ts). Text/icons distinguish working, input, approval, review and unknown activity; priority stays separate. Stopped output is bounded. |
 | F10 | Atomic state, backup, workspace lock and recovery | Shipped | [Store](../test/integration/store.test.ts), [lifecycle](../test/unit/lifecycle.test.ts). Records survive; process memory does not. |
 | F11 | Windows x64 and Mac arm64/x64 packages | Partial | [Packaged acceptance](../test/desktop/app.test.ts). Windows unsigned; Mac ad-hoc signed, not notarized. CI does not prove interactive privacy/Gatekeeper behavior. |
 

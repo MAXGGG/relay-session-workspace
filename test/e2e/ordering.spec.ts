@@ -17,7 +17,7 @@ test("a delayed HTTP snapshot cannot replace the newer process-exit state", asyn
     const id = created.body.state.selectedSessionId;
     await waitUntil(() => app.terminals.output(id).includes("WORKER_READY"));
     await page.goto(app.url);
-    await expect(page.locator("#terminal-status")).toHaveText("Running");
+    await expect(page.locator("#terminal-status")).toHaveText("Session open");
     const older = (await app.request("/api/state")).body;
     await page.route("**/api/stop", async (route) => {
       const response = await route.fetch();
