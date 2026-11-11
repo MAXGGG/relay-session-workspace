@@ -8,6 +8,8 @@ Zyi is a local application with four areas: sessions, a priority queue, an agent
 
 ## Develop and maintain Zyi
 
+The coordinator can now reach the app's management and view workflows, including templates, saved folders, settings, history pages and desktop menu controls. Forms and confirmations stay reviewable. See [what the coordinator can do](docs/coordinator.md), including the native Claude executable requirement on Windows.
+
 Start with the [feature catalogue](docs/features.md) for current capabilities and limitations, the [roadmap](docs/roadmap.md) for planned work, and [CONTRIBUTING.md](CONTRIBUTING.md) for the PR process. [Maintenance](docs/maintenance.md) defines ownership and compatibility; the [release runbook](docs/releases.md) covers validation and recovery. See [CHANGELOG.md](CHANGELOG.md) and [SECURITY.md](SECURITY.md) for changes and private vulnerability reporting.
 
 Required PR gates cover intake, repository/workflow policy, Windows/Ubuntu verification, security scans, and native Windows/Mac packaged acceptance. This engineering foundation does not remove the preview's signing and live-agent validation limitations.

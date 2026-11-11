@@ -1260,6 +1260,12 @@ dialog .error-text {
 .coordinator-progress:has(#coordinator-status:empty) {
   margin-top: 0;
 }
+#coordinator-workflow {
+  margin-top: 8px;
+  padding: 6px 8px;
+  font-size: 11px;
+  color: var(--accent);
+}
 .chat-form input {
   min-width: 0;
 }

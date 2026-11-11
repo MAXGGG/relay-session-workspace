@@ -52,6 +52,36 @@ test("desktop: bundled terminal, isolated window, background lifecycle, durable 
       return { sandbox: p.sandbox, node: p.nodeIntegration, isolation: p.contextIsolation };
     });
     assert.deepEqual(prefs, { sandbox: true, node: false, isolation: true });
+    await page.evaluate(() => (globalThis as any).zyiDesktop.menuAction("zoom-in"));
+    assert.equal(
+      await desktop.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()[0].webContents.getZoomLevel(),
+      ),
+      0.5,
+    );
+    await page.evaluate(() => (globalThis as any).zyiDesktop.menuAction("reset-zoom"));
+    await assert.rejects(
+      page.evaluate(() => (globalThis as any).zyiDesktop.menuAction("arbitrary-command")),
+      /Unsupported desktop menu action/,
+    );
+    await desktop.evaluate(({ dialog }) => {
+      const original = dialog.showMessageBox;
+      dialog.showMessageBox = async () => {
+        dialog.showMessageBox = original;
+        return { response: 0, checkboxChecked: false };
+      };
+    });
+    await page.evaluate(() => (globalThis as any).zyiDesktop.menuAction("quit"));
+    await expect(page.locator("#connection")).toContainText("Connected");
+    await desktop.evaluate(({ dialog }) => {
+      const original = dialog.showOpenDialog;
+      dialog.showOpenDialog = async () => {
+        dialog.showOpenDialog = original;
+        return { canceled: true, filePaths: [] };
+      };
+    });
+    await page.evaluate(() => (globalThis as any).zyiDesktop.importWorkspace());
+    await expect(page.locator("#connection")).toContainText("Connected");
     await desktop.evaluate(({ dialog }, folder) => {
       const original = dialog.showOpenDialog;
       dialog.showOpenDialog = async () => {

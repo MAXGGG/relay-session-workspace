@@ -55,6 +55,7 @@
           <div class="quick-actions"><button type="button" data-command="next task">Next task <span>↗</span></button><button type="button" data-command="status">Queue summary</button><button type="button" data-command="defer 30">Defer 30m</button><button id="reply-selected" type="button">Reply…</button></div>
           <form id="chat-form" class="chat-form"><label class="sr-only" for="chat-input">Coordinator command</label><input id="chat-input" autocomplete="off" placeholder='Open the session about payments, or start a new task…' maxlength="8000" /><button id="chat-send" type="submit" aria-label="Send command">↑</button></form>
           <div class="coordinator-progress"><span id="coordinator-status" role="status"></span><button id="coordinator-cancel" type="button" hidden>Cancel request</button></div>
+          <button id="coordinator-workflow" type="button" hidden>Open requested app workflow</button>
           <p id="coordinator-hint" class="chat-hint">Natural-language session management using your signed-in CLI.</p>
         </div>
       </section>

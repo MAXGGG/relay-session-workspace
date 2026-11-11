@@ -161,6 +161,62 @@ else {
       return chosen.canceled ? null : (chosen.filePaths[0] ?? null);
     });
     const allowedKeys = new Set(["relay-layout-v1", "relay-notifications"]);
+    ipcMain.handle("zyi:menu-action", async (event, operation: unknown) => {
+      if (
+        !window ||
+        window.isDestroyed() ||
+        event.sender !== content ||
+        !trusted(event.senderFrame?.url || "")
+      )
+        return;
+      switch (operation) {
+        case "about":
+          app.showAboutPanel();
+          break;
+        case "open-data-folder":
+          await shell.openPath(directory);
+          break;
+        case "show":
+          showWindow();
+          break;
+        case "hide":
+          window.hide();
+          break;
+        case "reload":
+          content.reload();
+          break;
+        case "zoom-in":
+          content.setZoomLevel(Math.min(5, content.getZoomLevel() + 0.5));
+          break;
+        case "zoom-out":
+          content.setZoomLevel(Math.max(-3, content.getZoomLevel() - 0.5));
+          break;
+        case "reset-zoom":
+          content.setZoomLevel(0);
+          break;
+        case "fullscreen":
+          window.setFullScreen(!window.isFullScreen());
+          break;
+        case "quit": {
+          const result = await dialog.showMessageBox(window, {
+            type: "question",
+            message: "Quit Zyi and stop its running sessions?",
+            detail: "Saved sessions and attention history are retained.",
+            buttons: ["Cancel", "Quit Zyi"],
+            defaultId: 0,
+            cancelId: 0,
+          });
+          if (result.response === 1) app.quit();
+          break;
+        }
+        default:
+          throw new Error("Unsupported desktop menu action.");
+      }
+    });
+    ipcMain.handle("zyi:import-workspace", async (event) => {
+      if (event.sender !== content || !trusted(event.senderFrame?.url || "")) return;
+      await importSavedWorkspace();
+    });
     ipcMain.on("zyi:preferences", (event) => {
       event.returnValue =
         event.sender === content && trusted(event.senderFrame?.url || "") ? preferences : {};

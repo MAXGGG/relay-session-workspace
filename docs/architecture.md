@@ -16,6 +16,8 @@ Version 0.3 adds `session-status.ts` for display states derived from live proces
 
 `public/layout.js` implements accessible pointer/keyboard splitters, bounded sizing and per-browser persistence. Grid changes resize xterm through the existing ResizeObserver.
 
+The coordinator's typed UI catalogue in `src/server/coordinator-ui.ts` prepares application workflows for the initiating window. Effects are validated and returned once with the original chat response, not stored or broadcast. `public/app.js` reuses existing forms/handlers, keeps unsaved dialogs intact, and requires their normal submissions/confirmations. Native menu/import IPC checks the owning renderer and origin and accepts only fixed operations. See [decision 0002](decisions/0002-coordinator-workflows.md) and [capabilities](coordinator.md).
+
 `src/server/store.ts` validates and atomically writes snapshots plus a previous-version backup. `lock.ts` prevents multiple servers writing one workspace. `profiles.ts` constructs executable/argument launch profiles. `terminals.ts` owns PTYs, server-side xterm emulation, resize and exit events. `transcripts.ts` persists bounded raw output. `delivery.ts` binds reviewed user input to a process generation and maintains write-ahead receipts. `app.ts` validates HTTP/WebSocket input, authenticates clients, receives events, serves assets and broadcasts snapshots. `main.ts` owns startup/shutdown.
 
 The UI renders state; it cannot decide an item is complete merely because someone opened its terminal. IDs and source request IDs keep session routing independent of mutable titles.

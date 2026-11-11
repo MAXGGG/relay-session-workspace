@@ -4,6 +4,8 @@
 
 ## [0.5.3] - 2026-11-11
 
+- Request Claude's structured action schema and report invalid coordinator output without applying guessed actions or showing a raw JSON parser error.
+- Extend the coordinator to application workflows: templates, saved folders, session forms, settings, queue history, search, layout, output, details, notifications and fixed desktop menu actions. Reuse existing review/confirmation flows and preserve open drafts.
 - Keep the queue within the desktop window. Handled history has 20 entries per page, newest handled first, with all records retained and reopenable. Pending and Deferred scroll independently.
 - Escape snapshot metadata consistently before rendering session, queue, message and attention-detail markup. Add an adversarial browser regression.
 - Resolve CodeQL SARIF extension rules correctly so full scans report and block serious findings without a parser failure.
