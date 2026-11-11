@@ -1,6 +1,6 @@
 # Zyi 0.5: everyday session workflow
 
-Patch 0.5.3 includes the follow-up fix below, escapes rendered metadata and validates CodeQL extension-rule references. The prepared 0.5.2 tag was withheld after its security gate failed; no 0.5.2 installers were published. See [0.5.3 release notes](release-notes-0.5.3.md).
+Patch 0.5.4 includes prominent session states, coordinator app workflows, bounded Handled history, the follow-up fix below, escaped metadata and correct CodeQL extension-rule validation. It also corrects a PID-file race in desktop shutdown acceptance. Tags 0.5.2 and 0.5.3 were withheld after security and shutdown checks respectively failed; neither published installers. See [0.5.4 release notes](release-notes-0.5.4.md).
 
 Patch 0.5.2 acknowledges earlier automatic Claude response cards when a submitted follow-up is paired with the current process's prompt hook. Terminal and Reply-dialog regressions retain Handled history without clearing approvals, errors, manually classified items or another session's work. Background hooks and viewing alone preserve results; see [release notes](release-notes-0.5.2.md).
 

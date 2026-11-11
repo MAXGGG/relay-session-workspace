@@ -4,7 +4,7 @@ This is the inventory of current and proposed behavior. The [roadmap](roadmap.md
 
 **Shipped** = tagged preview; **Partial** = implementation with named gaps; **Planned** = accepted direction; **Exploring** = not committed. Priorities: P0 data loss/security, P1 daily reliability, P2 improvement, P3 exploration. Owner for unassigned work: @MAXGGG.
 
-## Current release: 0.5.3
+## Current release: 0.5.4
 
 | ID | Feature | Status | Evidence and limits |
 | --- | --- | --- | --- |

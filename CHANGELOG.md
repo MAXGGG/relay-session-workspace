@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-## [0.5.3] - 2026-11-11
+## [0.5.4] - 2026-11-11
+
+- Publish the desktop test worker PID atomically, validate it and confirm the worker is alive before shutdown; require ESRCH afterward. Reading a newly created but empty PID file otherwise probes process group zero and can falsely fail shutdown acceptance. No production shutdown behavior changes.
+- Includes the changes prepared for the unpublished 0.5.3 tag, whose Apple Silicon shutdown check failed. Keep that tag unchanged and validate this corrected test in the new release.
 
 - Replace small session status dots/text with prominent text/icon badges and state-colored edges. Distinguish Working, Waiting for input, Approval needed, Ready to review, Idle and Session open; retain separate priority badges and pending counts. Match terminal/queue colors and respect reduced motion.
 - Request Claude's structured action schema and report invalid coordinator output without applying guessed actions or showing a raw JSON parser error.
@@ -17,6 +20,10 @@
 - Add feature inventory, roadmap, PR/issue intake, ownership and maintenance/release policies.
 - Enforce repository/workflow checks, PR metadata, security scans and aggregate CI/native gates.
 - Validate versioned notes and installer assets before publication.
+
+## [0.5.3] - 2026-11-11 (unpublished)
+
+- Desktop publication was withheld after the Apple Silicon worker-shutdown check failed. No installers were published. Version 0.5.4 corrects the PID-file race identified during investigation and includes the prepared application changes.
 
 ## [0.5.1] - 2026-11-10
 
@@ -40,7 +47,8 @@
 
 - Agent-independent profiles, terminals, durable attention and reviewed replies.
 
-[0.5.3]: https://github.com/MAXGGG/zyi/releases/tag/v0.5.3
+[0.5.4]: https://github.com/MAXGGG/zyi/releases/tag/v0.5.4
+[0.5.3]: https://github.com/MAXGGG/zyi/tree/v0.5.3
 [0.5.1]: https://github.com/MAXGGG/zyi/releases/tag/v0.5.1
 [0.5.0]: https://github.com/MAXGGG/zyi/releases/tag/v0.5.0
 [0.4.0]: https://github.com/MAXGGG/zyi/releases/tag/v0.4.0

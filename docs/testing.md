@@ -12,7 +12,9 @@ SARIF tests cover CodeQL extension-rule references, legacy driver rules, mismatc
 
 ## Product validation
 
-Version 0.5.3 has 23 unit, 36 integration, 28 browser and 2 desktop acceptance tests (89 on Windows; the Windows-only shim test is skipped on other platforms), plus nine tooling-policy tests. `npm run verify` covers the first three layers and tooling; build the desktop before `npm run test:desktop`. CI uses deterministic planners and subprocess fixtures; no model calls are made. Earlier management, coordinator, routing and resizing coverage remains in place.
+Version 0.5.4 has 23 unit, 36 integration, 28 browser and 2 desktop acceptance tests (89 on Windows; the Windows-only shim test is skipped on other platforms), plus nine tooling-policy tests. `npm run verify` covers the first three layers and tooling; build the desktop before `npm run test:desktop`. CI uses deterministic planners and subprocess fixtures; no model calls are made. Earlier management, coordinator, routing and resizing coverage remains in place.
+
+The disconnect test publishes its worker PID through a temporary file and atomic rename. It rejects invalid/group-zero PIDs, confirms the identified worker is alive before disconnect, then requires ESRCH after the engine exits and its workspace lock is released. During 0.5.3 release investigation, forcing an empty PID file reproduced the reported failure: Number("") becomes zero and kill(0, 0) checks a process group. This fixture correction does not add retries, sleeps, longer timeouts or production shutdown changes; native acceptance must still prove the actual worker exits.
 
 Session-state acceptance uses six real fixture PTYs and structured events to distinguish work, question, approval, review, idle and unknown activity. It verifies visible labels/icons/counts, independent priority styling, matching terminal state, reduced motion, transitions after handling, and narrow layouts. Domain cases cover every attention kind, deferred/other-session exclusion and preserving a new working state while an older result awaits review. Inspect test-artifacts/session-states.png after visual changes.
 

@@ -1,3 +1,5 @@
+Unpublished tag: the Apple Silicon shutdown acceptance check failed, so no 0.5.3 installers were published. Version 0.5.4 corrects the test's PID-file race and includes the prepared changes below. The 0.5.3 tag remains unchanged.
+
 Zyi 0.5.3 fixes accumulated Claude response cards and strengthens UI rendering and release validation.
 
 - Session state is now prominent: text/icon badges and colored edges distinguish working, input requests, approvals and review results. **Session open** means the process is alive with unknown activity; **Idle · ready** means a reported idle/finished turn with no pending item. Priority remains a separate badge; counts preserve outstanding work.
