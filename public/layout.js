@@ -110,6 +110,14 @@
     paint();
     persist();
   });
+  window.addEventListener("relay-set-layout", (event) => {
+    for (const key of Object.keys(defaults)) {
+      const value = event.detail?.[key];
+      if (typeof value === "number" && Number.isFinite(value)) sizes[key] = value;
+    }
+    paint();
+    persist();
+  });
   window.addEventListener("resize", paint);
   paint();
 })();

@@ -15,14 +15,36 @@ test("coordinator CLI transport preserves stdin, parses both providers, and repo
     );
     for (const provider of ["codex", "claude"] as const) {
       const prompt = 'Quoted "task" with & | % and\nmultiple lines; never a shell argument.';
-      const response = await runCoordinator({
-        provider,
-        settings: { provider, executable },
-        prompt,
-        directory,
-        signal: new AbortController().signal,
+      // Native argv transport allows the schema's JSON quotes on Windows;
+      // batch-shim restrictions are tested separately in profiles.test.ts.
+      const launch = (_executable: string, args: string[]) => ({
+        executable: process.execPath,
+        args: [path.join(projectRoot, "test/fixtures/coordinator-cli.mjs"), ...args],
       });
+      const response = await runCoordinator(
+        {
+          provider,
+          settings: { provider, executable },
+          prompt,
+          directory,
+          signal: new AbortController().signal,
+        },
+        launch,
+      );
       assert.equal(parseCoordinatorPlan(response).message, prompt);
+      await assert.rejects(
+        runCoordinator(
+          {
+            provider,
+            settings: { provider, executable },
+            prompt: "invalid output",
+            directory,
+            signal: new AbortController().signal,
+          },
+          launch,
+        ),
+        /No actions were applied/,
+      );
     }
     await assert.rejects(
       runCoordinator({

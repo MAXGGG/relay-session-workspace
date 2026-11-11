@@ -596,7 +596,9 @@ $("#chat-form").addEventListener("submit", async (event) => {
   $("#chat-input").value = "";
   $("#chat-send").disabled = true;
   try {
-    await api("/api/chat", { text, id });
+    const result = await api("/api/chat", { text, id });
+    if (result.uiRequest)
+      await runCoordinatorUi(result.uiRequest).catch((error) => toast(error.message));
   } catch (error) {
     toast(error.message);
     if (!$("#chat-input").value) $("#chat-input").value = text;
@@ -956,15 +958,16 @@ $("#reply-form").addEventListener("submit", async (event) => {
 document.querySelectorAll("[data-close]").forEach((button) => {
   button.addEventListener("click", () => $(`#${button.dataset.close}`).close());
 });
-$("#add-attention").addEventListener("click", () => {
-  const s = currentSession();
+function openAttention(sessionId) {
+  const s = snapshot.state.sessions.find((session) => session.id === sessionId);
   if (!s) return;
   manualTarget = s.id;
   $("#attention-target").textContent = `${s.name} · ${s.id}`;
   $("#attention-form").reset();
   $("#attention-error").textContent = "";
   $("#attention-dialog").showModal();
-});
+}
+$("#add-attention").addEventListener("click", () => openAttention(currentSession()?.id));
 $("#attention-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
@@ -977,8 +980,8 @@ $("#attention-form").addEventListener("submit", async (event) => {
     $("#attention-error").textContent = error.message;
   }
 });
-$("#export-output").addEventListener("click", async () => {
-  const s = currentSession();
+async function saveOutput(sessionId) {
+  const s = snapshot.state.sessions.find((session) => session.id === sessionId);
   if (!s) return;
   try {
     const result = await api(`/api/transcript?sessionId=${encodeURIComponent(s.id)}`);
@@ -991,7 +994,8 @@ $("#export-output").addEventListener("click", async () => {
   } catch (error) {
     toast(error.message);
   }
-});
+}
+$("#export-output").addEventListener("click", () => saveOutput(currentSession()?.id));
 $("#settings").addEventListener("click", () => {
   $("#settings-form [name=retireAfterDays]").value = snapshot?.state.settings?.retireAfterDays ?? 0;
   $("#settings-error").textContent = "";
@@ -1040,6 +1044,171 @@ $("#notifications").addEventListener("click", async () => {
   notificationLabel();
   if (!notifications && Notification.permission === "denied")
     toast("Notifications are blocked in browser settings.");
+});
+function prefillField(field, value) {
+  field.value = value;
+  for (let parent = field.parentElement; parent; parent = parent.parentElement)
+    if (parent.tagName === "DETAILS") parent.open = true;
+}
+function prepareSessionForm(request, editing = false) {
+  const { values, sessionId } = request;
+  const session = editing ? snapshot.state.sessions.find((s) => s.id === sessionId) : undefined;
+  if (editing && !session) throw new Error("This session no longer exists.");
+  openSessionDialog(session, values.group);
+  if (values.templateId) {
+    $("#session-template").value = values.templateId;
+    $("#session-template").dispatchEvent(new Event("change"));
+  }
+  const form = $("#session-form");
+  if (values.mode && !editing) {
+    form.elements.mode.value = values.mode;
+    form.elements.mode.dispatchEvent(new Event("change"));
+  }
+  for (const field of [
+    "name",
+    "cwd",
+    "priority",
+    "executable",
+    "args",
+    "resumeArgs",
+    "conversationId",
+    "attentionMode",
+    "quietSeconds",
+    "notes",
+    "group",
+  ]) {
+    if (values[field] !== undefined && !form.elements[field].disabled)
+      prefillField(form.elements[field], values[field]);
+  }
+  if (
+    ["executable", "args", "resumeArgs", "conversationId", "attentionMode", "quietSeconds"].some(
+      (field) => values[field] !== undefined,
+    )
+  )
+    $("#advanced-settings").open = true;
+  if (values.group !== undefined) $("#group-settings").open = true;
+  refreshSessionLibrary();
+  sessionModeHint();
+}
+
+const coordinatorUiHandlers = {
+  "new-session": (request) => prepareSessionForm(request),
+  "edit-session": (request) => prepareSessionForm(request, true),
+  templates: (request) => {
+    prepareSessionForm(request);
+    if (request.values.templateName !== undefined)
+      $("#template-name").value = request.values.templateName;
+    $("#template-save").open = true;
+    $("#template-name").focus();
+  },
+  "saved-folder": (request) => {
+    prepareSessionForm(request);
+    $("#group-settings").open = true;
+    $("#session-form [name=group]").dispatchEvent(new Event("change"));
+    if (request.values.cwd !== undefined)
+      $("#session-form").elements.cwd.value = request.values.cwd;
+  },
+  "browse-folder": async (request) => {
+    prepareSessionForm(request);
+    if (!window.zyiDesktop?.chooseDirectory)
+      return toast(
+        "Enter the project path in the form. The folder picker is available in the desktop app.",
+      );
+    const directory = await window.zyiDesktop.chooseDirectory();
+    if (directory) $("#session-form").elements.cwd.value = directory;
+  },
+  "delete-session": ({ sessionId }) => sessionAction(sessionId, "delete"),
+  "stop-archive": ({ sessionId }) => sessionAction(sessionId, "stop-archive"),
+  "session-up": ({ sessionId }) => sessionAction(sessionId, "up"),
+  "session-down": ({ sessionId }) => sessionAction(sessionId, "down"),
+  "save-output": ({ sessionId }) => saveOutput(sessionId),
+  "search-sessions": ({ values }) => {
+    if (values.query !== undefined) $("#session-search").value = values.query;
+    if (values.showArchived !== undefined)
+      $("#show-archived").checked = values.showArchived === "true";
+    render(snapshot);
+  },
+  queue: ({ values }) => {
+    if (values.filter) $(`[data-filter="${values.filter}"]`).click();
+    if (values.page && filter === "resolved") {
+      handledPage = Math.max(0, Number(values.page) - 1);
+      render(snapshot);
+      $("#queue").scrollTop = 0;
+    }
+  },
+  "add-attention": ({ sessionId, values }) => {
+    openAttention(sessionId);
+    for (const field of ["kind", "text"])
+      if (values[field] !== undefined) $("#attention-form").elements[field].value = values[field];
+  },
+  settings: ({ values }) => {
+    $("#settings").click();
+    for (const field of [
+      "retireAfterDays",
+      "coordinatorProvider",
+      "coordinatorCwd",
+      "coordinatorWorker",
+      "coordinatorExecutable",
+      "coordinatorModel",
+    ])
+      if (values[field] !== undefined)
+        prefillField($("#settings-form").elements[field], values[field]);
+  },
+  notifications: async ({ values }) => {
+    const enabled = values.enabled === undefined ? !notifications : values.enabled === "true";
+    if (notifications !== enabled) $("#notifications").click();
+  },
+  layout: ({ values }) => {
+    if (!Object.keys(values).length) $("#reset-layout").click();
+    else
+      window.dispatchEvent(
+        new CustomEvent("relay-set-layout", {
+          detail: Object.fromEntries(
+            Object.entries(values).map(([key, value]) => [key, Number(value)]),
+          ),
+        }),
+      );
+  },
+  "claude-details": async ({ sessionId, values }) => {
+    await api("/api/select", { sessionId });
+    if ($("#claude-details").hidden)
+      throw new Error("This session has no Claude connection details.");
+    $("#claude-details").open = values.expanded !== "false";
+  },
+  "attention-preview": async ({ itemId, values }) => {
+    await api("/api/select", { itemId });
+    const details = $("#focus-item details");
+    if (details) details.open = values.expanded !== "false";
+  },
+  "import-workspace": async () => {
+    if (!window.zyiDesktop?.importWorkspace)
+      throw new Error("Workspace import is available in the desktop app.");
+    await window.zyiDesktop.importWorkspace();
+  },
+  "desktop-menu": async ({ values }) => {
+    if (!window.zyiDesktop?.menuAction)
+      throw new Error("This menu action is available in the desktop app.");
+    await window.zyiDesktop.menuAction(values.operation);
+  },
+};
+let pendingWorkflow;
+async function runCoordinatorUi(request) {
+  if (!Object.hasOwn(coordinatorUiHandlers, request.flow))
+    throw new Error("Unsupported app workflow. Update Zyi and try again.");
+  if (document.querySelector("dialog[open]")) {
+    pendingWorkflow = request;
+    $("#coordinator-workflow").hidden = false;
+    toast("Your open form was kept. Finish or close it, then select Open requested app workflow.");
+    return;
+  }
+  if (request.sessionId && !snapshot.state.sessions.some((s) => s.id === request.sessionId))
+    throw new Error("The requested session no longer exists.");
+  pendingWorkflow = undefined;
+  $("#coordinator-workflow").hidden = true;
+  await coordinatorUiHandlers[request.flow](request);
+}
+$("#coordinator-workflow").addEventListener("click", () => {
+  if (pendingWorkflow) runCoordinatorUi(pendingWorkflow).catch((error) => toast(error.message));
 });
 window.addEventListener("beforeunload", () => {
   closed = true;

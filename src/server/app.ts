@@ -21,6 +21,7 @@ import {
   parseCoordinatorPlan,
   runCoordinator,
 } from "./coordinator-agent.ts";
+import { type CoordinatorUiRequest, prepareUiRequest } from "./coordinator-ui.ts";
 import { deliverReply } from "./delivery.ts";
 import { acquireWorkspace } from "./lock.ts";
 import { argumentList, findExecutable } from "./profiles.ts";
@@ -292,11 +293,21 @@ export async function createApp(
         startTerminal(session.id);
         return `Created and started ${session.name} (${session.id}) in ${session.cwd}.${session.initialPrompt ? " Initial task passed to the agent; any login or trust prompt remains in its terminal." : ""}`;
       }
-      if (action.kind === "resolve" || action.kind === "defer") {
+      if (
+        action.kind === "resolve" ||
+        action.kind === "defer" ||
+        action.kind === "reopen" ||
+        action.kind === "classify"
+      ) {
         const id = string(action.itemId);
         if (action.kind === "resolve") workspace.resolve(id);
-        else workspace.snooze(id, action.minutes ?? 30);
-        return `${action.kind === "resolve" ? "Handled" : "Deferred"} ${id}.`;
+        else if (action.kind === "defer") workspace.snooze(id, action.minutes ?? 30);
+        else if (action.kind === "reopen") workspace.reopen(id);
+        else {
+          if (!action.itemKind) throw new Error("Choose an attention kind.");
+          workspace.classify(id, action.itemKind);
+        }
+        return `${{ resolve: "Handled", defer: "Deferred", reopen: "Reopened", classify: "Reclassified" }[action.kind]} ${id}.`;
       }
       if (action.kind === "open" && action.itemId) {
         const item = workspace.selectItem(action.itemId);
@@ -305,6 +316,7 @@ export async function createApp(
       const session = workspace.session(string(action.sessionId));
       switch (action.kind) {
         case "open":
+        case "restore":
           workspace.restore(session.id);
           return `Opened ${session.name}.`;
         case "start":
@@ -443,6 +455,7 @@ export async function createApp(
               const controller = new AbortController();
               coordinatorAbort = controller;
               broadcast();
+              let uiRequest: CoordinatorUiRequest | undefined;
               coordinatorTask = (async () => {
                 const results: string[] = [];
                 try {
@@ -465,7 +478,12 @@ export async function createApp(
                   for (const action of plan.actions) {
                     if (controller.signal.aborted)
                       throw new Error("Coordinator request cancelled.");
-                    results.push(await applyCoordinatorAction(action));
+                    if (action.kind === "ui") {
+                      uiRequest = prepareUiRequest(workspace, action);
+                      results.push(
+                        "Prepared the requested app workflow. Complete any form or confirmation shown in this window; changes are not saved merely by opening it.",
+                      );
+                    } else results.push(await applyCoordinatorAction(action));
                     broadcast();
                   }
                   workspace.message(
@@ -476,6 +494,7 @@ export async function createApp(
                   );
                   request.status = "done";
                 } catch (error) {
+                  uiRequest = undefined;
                   request.status = "failed";
                   workspace.message(
                     "assistant",
@@ -487,7 +506,9 @@ export async function createApp(
                 }
               })();
               await coordinatorTask;
-              return respond(response, 200, state());
+              // Deliver browser effects only to this request's client. They are
+              // neither broadcast nor replayed on reload or request-ID retries.
+              return respond(response, 200, { ...state(), ...(uiRequest ? { uiRequest } : {}) });
             }
             case "/api/reply": {
               const delivery = await deliverReply(workspace, terminals, store, {

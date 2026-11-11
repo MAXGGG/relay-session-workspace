@@ -12,7 +12,9 @@ SARIF tests cover CodeQL extension-rule references, legacy driver rules, mismatc
 
 ## Product validation
 
-Version 0.5.3 has 22 unit, 33 integration, 24 browser and 2 desktop acceptance tests (81 on Windows; the Windows-only shim test is skipped on other platforms), plus nine tooling-policy tests. `npm run verify` covers the first three layers and tooling; build the desktop before `npm run test:desktop`. CI uses deterministic planners and subprocess fixtures; no model calls are made. Earlier management, coordinator, routing and resizing coverage remains in place.
+Version 0.5.3 has 22 unit, 36 integration, 27 browser and 2 desktop acceptance tests (87 on Windows; the Windows-only shim test is skipped on other platforms), plus nine tooling-policy tests. `npm run verify` covers the first three layers and tooling; build the desktop before `npm run test:desktop`. CI uses deterministic planners and subprocess fixtures; no model calls are made. Earlier management, coordinator, routing and resizing coverage remains in place.
+
+Coordinator regressions exercise schema arguments and malformed prose from real CLI fixtures, validation before mutation, typed UI targets and fields, no effect replay, settings/folder/template forms, a real custom-template PTY launch, edit/delete target binding, cancellation, history/export/layout controls and preserving unsaved forms during delayed inference. Native acceptance covers menu IPC rejection, zoom, cancelled Quit and cancelled import; live model intent selection and OS permission dialogs remain separate acceptance.
 
 Queue-history regressions reproduce the growing workspace with 61 handled records. They verify internal scrolling at desktop heights of 950, 720 and 600px, 20-item pages, handled-time ordering, last-page removal/reopen, refresh retention, live updates and a 390px stacked layout. Large Pending/Deferred lists stay complete and independently scrollable. Inspect the generated queue-history screenshots after changing layout.
 
