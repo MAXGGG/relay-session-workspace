@@ -1,6 +1,6 @@
 {
   "name": "zyi",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "private": true,
   "license": "MIT",
   "description": "Zyi: one attention inbox and desktop workspace for your CLI agents.",

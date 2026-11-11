@@ -1,0 +1,16 @@
+Zyi 0.5.4 fixes accumulated Claude response cards and strengthens UI rendering and release validation.
+
+- Includes the application improvements prepared for unpublished 0.5.3. Corrects a race in the desktop shutdown test by publishing the complete worker PID atomically and verifying the actual worker before and after shutdown. No production shutdown behavior changes.
+- Session state is now prominent: text/icon badges and colored edges distinguish working, input requests, approvals and review results. **Session open** means the process is alive with unknown activity; **Idle · ready** means a reported idle/finished turn with no pending item. Priority remains a separate badge; counts preserve outstanding work.
+- The Claude coordinator now requests structured action output. Malformed responses show a clear failure; no guessed action or automatic retry runs.
+- Ask the coordinator to manage templates, folder defaults, session forms, settings, history views, search, output exports, layout, details, notifications and desktop menu flows. It reuses existing forms and confirmations; preparing changes does not silently save them. See [coordinator capabilities](https://github.com/MAXGGG/zyi/blob/main/docs/coordinator.md).
+- **Handled** history stays within its panel, with 20 entries per page, Previous/Next controls and the most recently handled items first. No history is deleted. Pending and Deferred also scroll inside the panel instead of stretching the workspace.
+- Submit a follow-up in the terminal or through **Reply…**: when connected Claude hooks report the prompt, earlier automatic response cards for that session move to **Handled**. The next response gets its own pending card. Handled entries remain available to reopen.
+- Viewing or typing an unsent draft leaves results pending. Background prompt events alone cannot acknowledge them. Errors, permission requests and manually classified items still need explicit handling. This acknowledgement does not certify correctness or grant permission.
+- Escape session/status/priority metadata, message roles and item IDs before using them in HTML. A browser regression verifies hostile snapshot metadata and model text remain literal instead of injecting markup.
+- Correctly read CodeQL's extension-rule references in SARIF. Full security scans continue to block serious findings. The 0.5.2 tag was withheld when this gate failed; it had no published installers.
+- Includes the maintenance foundation: documented features/roadmap, PR rules, enforced CI/security/native builds and validated release assets/checksums.
+
+Quit Zyi before upgrading, install the matching Windows x64 or Mac arm64/x64 package, then reopen and resume your sessions. Existing records and pending entries are retained; your next submitted Claude follow-up can acknowledge older automatic response cards. No data migration is required.
+
+The reply fix requires Claude hooks connected to Zyi; other agents and plain Shell sessions retain their existing behavior. Tests use real PTYs and the shipped bridge with deterministic fixtures, not paid inference. Live Claude/macOS acceptance remains separate. Windows remains unsigned; Mac builds remain ad-hoc signed and not notarized. Folder-permission and signing limitations are unchanged.
