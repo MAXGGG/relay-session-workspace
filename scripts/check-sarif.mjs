@@ -7,12 +7,39 @@ export function seriousFindings(sarif) {
     throw new Error("Missing or unsupported SARIF results.");
   const findings = [];
   for (const run of sarif.runs) {
-    const rules = run.tool?.driver?.rules;
-    if (!Array.isArray(rules) || !Array.isArray(run.results))
+    if (!run.tool?.driver || !Array.isArray(run.results))
       throw new Error("SARIF must include rules and results.");
     for (const result of run.results) {
-      const rule = rules.find((entry) => entry.id === result.ruleId) ?? rules[result.ruleIndex];
-      if (!rule) throw new Error("SARIF result refers to an unknown rule.");
+      const reference = result.rule?.toolComponent;
+      if (
+        reference?.index !== undefined &&
+        (!Number.isInteger(reference.index) || reference.index < 0)
+      )
+        throw new Error("Invalid SARIF rule component index.");
+      const component = reference
+        ? reference.index !== undefined
+          ? run.tool.extensions?.[reference.index]
+          : run.tool.extensions?.find((entry) =>
+              reference.guid ? entry.guid === reference.guid : entry.name === reference.name,
+            )
+        : run.tool.driver;
+      if (!component || !Array.isArray(component.rules))
+        throw new Error("SARIF result refers to an unknown rule component.");
+      const id = result.rule?.id ?? result.ruleId;
+      const index = result.rule?.index ?? result.ruleIndex;
+      if (index !== undefined && (!Number.isInteger(index) || index < 0))
+        throw new Error("Invalid SARIF rule index.");
+      const rule =
+        index === undefined
+          ? component.rules.find((entry) => entry.id === id)
+          : component.rules[index];
+      if (!rule || typeof rule.id !== "string" || !rule.id)
+        throw new Error("SARIF result refers to an unknown rule.");
+      if (
+        (id !== undefined && rule.id !== id) ||
+        (result.ruleId !== undefined && rule.id !== result.ruleId)
+      )
+        throw new Error("SARIF rule identity does not match its index.");
       const score = Number(rule.properties?.["security-severity"] ?? 0);
       if (!Number.isFinite(score)) throw new Error("Invalid SARIF security score.");
       const level = result.level ?? rule.defaultConfiguration?.level ?? "warning";

@@ -8,9 +8,11 @@ In addition to product tests below, `npm run verify` includes tooling policy tes
 
 Tooling policy tests cover incomplete PR descriptions, untrusted metadata, version mismatches and incomplete/empty release assets. They do not change domain coverage thresholds. Workflow syntax is validated by actionlint locally or by the Repository policy job.
 
+SARIF tests cover CodeQL extension-rule references, legacy driver rules, mismatched identities and invalid indexes. The 0.5.3 renderer test injects hostile metadata into a snapshot and asserts it creates no markup while remaining readable as literal text. PR scans can be differential; verify the full main security scan before tagging, and retain full security validation on tagged publication.
+
 ## Product validation
 
-Version 0.5.2 has 22 unit, 33 integration, 21 browser and 2 desktop acceptance tests (78 on Windows; the Windows-only shim test is skipped on other platforms), plus eight tooling-policy tests. `npm run verify` covers the first three layers and tooling; build the desktop before `npm run test:desktop`. CI uses deterministic planners and subprocess fixtures; no model calls are made. Earlier management, coordinator, routing and resizing coverage remains in place.
+Version 0.5.3 has 22 unit, 33 integration, 22 browser and 2 desktop acceptance tests (79 on Windows; the Windows-only shim test is skipped on other platforms), plus nine tooling-policy tests. `npm run verify` covers the first three layers and tooling; build the desktop before `npm run test:desktop`. CI uses deterministic planners and subprocess fixtures; no model calls are made. Earlier management, coordinator, routing and resizing coverage remains in place.
 
 The 0.5.2 follow-up regression reproduces accumulated Claude review cards. A real PTY fixture invokes the shipped bridge for consecutive turns, exercises terminal typing and the Reply dialog, and verifies only the latest response remains pending while Handled history survives reload. Unit/integration cases preserve other sessions, errors, approvals, manual classifications and newer results, and reject background-only, cancelled, expired and stale-process acknowledgement. This is deterministic integration evidence, not a live Claude/macOS acceptance claim.
 
