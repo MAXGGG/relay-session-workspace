@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-## [0.5.2] - 2026-11-11
+## [0.5.3] - 2026-11-11
+
+- Escape snapshot metadata consistently before rendering session, queue, message and attention-detail markup. Add an adversarial browser regression.
+- Resolve CodeQL SARIF extension rules correctly so full scans report and block serious findings without a parser failure.
+- Includes the follow-up fix prepared for 0.5.2. The 0.5.2 tag was withheld from publication after its full security gate failed; no 0.5.2 installers were released.
 
 - Submitted Claude follow-ups acknowledge earlier automatic response entries in the same session. Handled history is retained; viewing, background prompts, approvals, errors and manual classifications are preserved.
 - Pair actual input with a current-process prompt hook; discard stale, cancelled and expired candidates without clearing newer results.
@@ -32,7 +36,7 @@
 
 - Agent-independent profiles, terminals, durable attention and reviewed replies.
 
-[0.5.2]: https://github.com/MAXGGG/zyi/releases/tag/v0.5.2
+[0.5.3]: https://github.com/MAXGGG/zyi/releases/tag/v0.5.3
 [0.5.1]: https://github.com/MAXGGG/zyi/releases/tag/v0.5.1
 [0.5.0]: https://github.com/MAXGGG/zyi/releases/tag/v0.5.0
 [0.4.0]: https://github.com/MAXGGG/zyi/releases/tag/v0.4.0

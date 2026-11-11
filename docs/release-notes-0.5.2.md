@@ -1,3 +1,5 @@
+Unpublished: the 0.5.2 tag failed its full security gate. No installers were released. These changes are included in [0.5.3](release-notes-0.5.3.md); the original prepared notes follow.
+
 Zyi 0.5.2 fixes older Claude response cards staying in the attention queue after you reply.
 
 - Submit a follow-up in the terminal or through **Reply…**: when connected Claude hooks report the prompt, earlier automatic response cards for that session move to **Handled**. The next response gets its own pending card, without retaining the previous response as pending.

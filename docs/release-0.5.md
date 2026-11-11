@@ -1,5 +1,7 @@
 # Zyi 0.5: everyday session workflow
 
+Patch 0.5.3 includes the follow-up fix below, escapes rendered metadata and validates CodeQL extension-rule references. The prepared 0.5.2 tag was withheld after its security gate failed; no 0.5.2 installers were published. See [0.5.3 release notes](release-notes-0.5.3.md).
+
 Patch 0.5.2 acknowledges earlier automatic Claude response cards when a submitted follow-up is paired with the current process's prompt hook. Terminal and Reply-dialog regressions retain Handled history without clearing approvals, errors, manually classified items or another session's work. Background hooks and viewing alone preserve results; see [release notes](release-notes-0.5.2.md).
 
 Patch 0.5.1 adds a saved Claude permission checkbox and field-specific argument validation. Browser regressions reproduce an unexpected-comma error in the second JSON field while the first field is valid, verify invalid arrays never launch a worker, and exercise template reuse/editing of the permission choice without altering other arguments.

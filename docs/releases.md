@@ -12,7 +12,7 @@ Tagged releases are authoritative. Maintain [CHANGELOG.md](../CHANGELOG.md) and 
 
 ## Publish
 
-After merge, tag the main commit with matching vVERSION and push. Never retag a published release.
+After merge, verify the full main security scan passes before tagging the main commit with matching vVERSION and pushing. PR analysis may omit unchanged findings; a green PR scan is not proof the full tree is clean. Never retag a published release. If a tag fails release validation, fix forward with a new version and record the unpublished tag.
 
 Desktop CI verifies tag/package/lock/UI/changelog/notes consistency, main ancestry and dependencies; builds/tests natively; validates all five package assets; then publishes preview notes and SHA256SUMS.txt. Only publication has write access. PR jobs have no signing credentials.
 

@@ -1,0 +1,11 @@
+Zyi 0.5.3 fixes accumulated Claude response cards and strengthens UI rendering and release validation.
+
+- Submit a follow-up in the terminal or through **Reply…**: when connected Claude hooks report the prompt, earlier automatic response cards for that session move to **Handled**. The next response gets its own pending card. Handled entries remain available to reopen.
+- Viewing or typing an unsent draft leaves results pending. Background prompt events alone cannot acknowledge them. Errors, permission requests and manually classified items still need explicit handling. This acknowledgement does not certify correctness or grant permission.
+- Escape session/status/priority metadata, message roles and item IDs before using them in HTML. A browser regression verifies hostile snapshot metadata and model text remain literal instead of injecting markup.
+- Correctly read CodeQL's extension-rule references in SARIF. Full security scans continue to block serious findings. The 0.5.2 tag was withheld when this gate failed; it had no published installers.
+- Includes the maintenance foundation: documented features/roadmap, PR rules, enforced CI/security/native builds and validated release assets/checksums.
+
+Quit Zyi before upgrading, install the matching Windows x64 or Mac arm64/x64 package, then reopen and resume your sessions. Existing records and pending entries are retained; your next submitted Claude follow-up can acknowledge older automatic response cards. No data migration is required.
+
+The reply fix requires Claude hooks connected to Zyi; other agents and plain Shell sessions retain their existing behavior. Tests use real PTYs and the shipped bridge with deterministic fixtures, not paid inference. Live Claude/macOS acceptance remains separate. Windows remains unsigned; Mac builds remain ad-hoc signed and not notarized. Folder-permission and signing limitations are unchanged.

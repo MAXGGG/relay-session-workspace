@@ -166,7 +166,10 @@ function announce(data) {
       session = data.state.sessions.find((s) => s.id === item.sessionId);
     const notice = new Notification(
       `Zyi · ${fresh.length} new attention item${fresh.length === 1 ? "" : "s"}`,
-      { body: `P${item.priority} · ${session.name} · ${kinds[item.kind]}`, tag: "relay-attention" },
+      {
+        body: `P${esc(item.priority)} · ${session.name} · ${esc(kinds[item.kind])}`,
+        tag: "relay-attention",
+      },
     );
     notice.onclick = () => {
       window.focus();
@@ -216,7 +219,7 @@ function render(data) {
                 const live = data.terminals?.[s.id];
                 const menu = (action, text, disabled = false) =>
                   `<button type="button" data-session-action="${action}" ${disabled ? "disabled" : ""}>${text}</button>`;
-                return `<article class="session-card priority-${s.priority} ${state.selectedSessionId === s.id ? "active" : ""}" data-session-id="${esc(s.id)}" draggable="true"><button type="button" class="session-open" data-session="${esc(s.id)}" aria-label="Open ${esc(s.name)}" aria-pressed="${state.selectedSessionId === s.id}"><span class="session-card-top"><span class="status-dot ${status.code}" data-status="${status.code}" role="img" aria-label="${esc(status.label)}" title="${esc(status.detail)}"></span><span class="session-card-name">${esc(s.name)}</span>${count ? `<span class="attention-count">${count}</span>` : ""}</span><span class="session-card-project">${esc(s.project)}</span><span class="session-card-bottom"><span>${s.archivedAt !== undefined ? "Archived" : esc(status.label)}</span><span class="priority-badge priority-${s.priority}" title="Priority ${s.priority}">${priorities[s.priority]}</span><span class="sample-tag">${s.mode === "demo" ? "SAMPLE" : s.mode.toUpperCase()}</span></span></button><details class="session-menu"><summary aria-label="Actions for ${esc(s.name)}" title="Organize session">⋯</summary><div>${menu("edit", "Rename / edit group")}${menu("pin", s.pinned ? "Unpin" : "Pin to top")}${menu("up", "Move up")}${menu("down", "Move down")}${menu("stop", "Stop terminal", !live || live.stopping)}${menu(s.archivedAt !== undefined ? "restore" : live ? "stop-archive" : "archive", s.archivedAt !== undefined ? "restore" : live ? "Stop & archive" : "Archive session", live?.stopping)}${menu("delete", "Delete saved session…", !!live)}</div></details></article>`;
+                return `<article class="session-card priority-${esc(s.priority)} ${state.selectedSessionId === s.id ? "active" : ""}" data-session-id="${esc(s.id)}" draggable="true"><button type="button" class="session-open" data-session="${esc(s.id)}" aria-label="Open ${esc(s.name)}" aria-pressed="${state.selectedSessionId === s.id}"><span class="session-card-top"><span class="status-dot ${esc(status.code)}" data-status="${esc(status.code)}" role="img" aria-label="${esc(status.label)}" title="${esc(status.detail)}"></span><span class="session-card-name">${esc(s.name)}</span>${count ? `<span class="attention-count">${count}</span>` : ""}</span><span class="session-card-project">${esc(s.project)}</span><span class="session-card-bottom"><span>${s.archivedAt !== undefined ? "Archived" : esc(status.label)}</span><span class="priority-badge priority-${esc(s.priority)}" title="Priority ${esc(s.priority)}">${esc(priorities[s.priority])}</span><span class="sample-tag">${s.mode === "demo" ? "SAMPLE" : esc(s.mode.toUpperCase())}</span></span></button><details class="session-menu"><summary aria-label="Actions for ${esc(s.name)}" title="Organize session">⋯</summary><div>${menu("edit", "Rename / edit group")}${menu("pin", s.pinned ? "Unpin" : "Pin to top")}${menu("up", "Move up")}${menu("down", "Move down")}${menu("stop", "Stop terminal", !live || live.stopping)}${menu(s.archivedAt !== undefined ? "restore" : live ? "stop-archive" : "archive", s.archivedAt !== undefined ? "restore" : live ? "Stop & archive" : "Archive session", live?.stopping)}${menu("delete", "Delete saved session…", !!live)}</div></details></article>`;
               })
               .join("")}</div>`,
         )
@@ -239,7 +242,7 @@ function render(data) {
               : item.confidence === "suggested"
                 ? "Suggestion · verify in terminal"
                 : "Session event";
-          return `<article class="queue-card priority-${item.priority} ${state.selectedItemId === item.id ? "selected" : ""}" data-item-card="${esc(item.id)}"><div class="queue-card-top"><span class="kind ${item.kind}">${kinds[item.kind]}</span><select class="priority-select priority-${item.priority}" aria-label="Priority for ${esc(session.name)}" data-priority="${esc(session.id)}">${[1, 2, 3].map((p) => `<option value="${p}" ${p === item.priority ? "selected" : ""}>${priorities[p]}</option>`).join("")}</select></div><button type="button" class="queue-open" data-item="${esc(item.id)}"><strong>${esc(item.title)}</strong><span class="queue-project">${esc(session.name)} <span>↗</span></span></button><div class="queue-card-meta"><span>${source}</span><span>${age(item.createdAt)}</span></div><div class="queue-card-actions">${item.status !== "resolved" ? `<button type="button" data-resolve="${item.id}">${item.kind === "review" ? "Mark reviewed" : "Mark handled"}</button>${item.status === "snoozed" ? `<button type="button" data-reopen="${item.id}">Bring back</button>` : `<button type="button" data-defer="${item.id}">Defer 30m</button>`}` : `<button type="button" data-reopen="${item.id}">Reopen</button>`}</div></article>`;
+          return `<article class="queue-card priority-${esc(item.priority)} ${state.selectedItemId === item.id ? "selected" : ""}" data-item-card="${esc(item.id)}"><div class="queue-card-top"><span class="kind ${esc(item.kind)}">${esc(kinds[item.kind])}</span><select class="priority-select priority-${esc(item.priority)}" aria-label="Priority for ${esc(session.name)}" data-priority="${esc(session.id)}">${[1, 2, 3].map((p) => `<option value="${p}" ${p === item.priority ? "selected" : ""}>${priorities[p]}</option>`).join("")}</select></div><button type="button" class="queue-open" data-item="${esc(item.id)}"><strong>${esc(item.title)}</strong><span class="queue-project">${esc(session.name)} <span>↗</span></span></button><div class="queue-card-meta"><span>${source}</span><span>${age(item.createdAt)}</span></div><div class="queue-card-actions">${item.status !== "resolved" ? `<button type="button" data-resolve="${esc(item.id)}">${item.kind === "review" ? "Mark reviewed" : "Mark handled"}</button>${item.status === "snoozed" ? `<button type="button" data-reopen="${esc(item.id)}">Bring back</button>` : `<button type="button" data-defer="${esc(item.id)}">Defer 30m</button>`}` : `<button type="button" data-reopen="${esc(item.id)}">Reopen</button>`}</div></article>`;
         })
         .join("")
     : `<div class="empty-queue"><strong>${filter === "pending" ? "All clear." : "Nothing here yet."}</strong>${filter === "pending" ? "New questions, results, and activity suggestions will appear here." : filter === "snoozed" ? "Deferred items return automatically." : "Handled items stay available here."}</div>`;
@@ -248,7 +251,9 @@ function render(data) {
   if (key !== lastMessages) {
     lastMessages = key;
     $("#messages").innerHTML = state.messages.length
-      ? state.messages.map((m) => `<div class="message ${m.role}">${esc(m.text)}</div>`).join("")
+      ? state.messages
+          .map((m) => `<div class="message ${esc(m.role)}">${esc(m.text)}</div>`)
+          .join("")
       : '<div class="message assistant">Start a session, then use “next task” to open the highest-priority item. I can find sessions, organize the queue, and prepare replies for you to send.</div>';
     $("#messages").scrollTop = $("#messages").scrollHeight;
   }
@@ -308,7 +313,7 @@ function render(data) {
   $("#focus-item").hidden = !focused;
   if (focused && focusKey !== lastFocus)
     $("#focus-item").innerHTML =
-      `<details open><summary>${focused.status === "resolved" ? "Handled" : `P${focused.priority} · ${focused.kind}`} — ${esc(focused.title)}</summary><pre>${esc(focused.detail)}</pre><label>Classify as <select id="classify-item" data-id="${focused.id}">${Object.entries(
+      `<details open><summary>${focused.status === "resolved" ? "Handled" : `P${esc(focused.priority)} · ${esc(focused.kind)}`} — ${esc(focused.title)}</summary><pre>${esc(focused.detail)}</pre><label>Classify as <select id="classify-item" data-id="${esc(focused.id)}">${Object.entries(
         kinds,
       )
         .map(

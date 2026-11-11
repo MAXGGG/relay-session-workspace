@@ -4,7 +4,7 @@
 
 Zyi is a local application with four areas: sessions, a priority queue, an agent-backed coordinator, and the selected session's original terminal. Session management and quick actions run locally. Coordinator agent requests and workers use their respective CLI accounts and usage allowances; Zyi has no separate service fee.
 
-**Release: 0.5.2 desktop preview.** Claude follow-ups now move earlier response entries to Handled, avoiding accumulated review cards. Includes saved folders/templates, working/priority indicators and terminal screen restoration. Formerly Relay, now **Zyi**, inspired by 注意 (attention). Automatic project-memory/skill extraction remains planned separately. See [0.5 goals and acceptance](docs/release-0.5.md) and [validation details](docs/testing.md).
+**Release: 0.5.3 desktop preview.** Claude follow-ups now move earlier response entries to Handled, avoiding accumulated review cards. Includes saved folders/templates, working/priority indicators and terminal screen restoration. Formerly Relay, now **Zyi**, inspired by 注意 (attention). Automatic project-memory/skill extraction remains planned separately. See [0.5 goals and acceptance](docs/release-0.5.md) and [validation details](docs/testing.md).
 
 ## Develop and maintain Zyi
 
@@ -18,9 +18,9 @@ Download the matching package from [GitHub Releases](https://github.com/MAXGGG/z
 
 | Computer | Download |
 | --- | --- |
-| Windows x64 | `Zyi-0.5.2-win-x64.exe` installer |
-| Mac with Apple Silicon (M1 or newer) | `Zyi-0.5.2-mac-arm64.dmg` |
-| Intel Mac | `Zyi-0.5.2-mac-x64.dmg` |
+| Windows x64 | `Zyi-0.5.3-win-x64.exe` installer |
+| Mac with Apple Silicon (M1 or newer) | `Zyi-0.5.3-mac-arm64.dmg` |
+| Intel Mac | `Zyi-0.5.3-mac-x64.dmg` |
 
 Install and open **Zyi**. Zyi includes its own Node runtime; install and authenticate your desired agent separately. Windows builds are unsigned and macOS builds are ad-hoc signed, not notarized, so this preview may trigger first-launch OS warnings. Read the [full desktop setup guide](docs/desktop.md) for installation, importing existing sessions, storage locations, upgrades and troubleshooting.
 

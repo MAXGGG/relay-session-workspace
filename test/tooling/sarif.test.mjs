@@ -45,3 +45,25 @@ test("SARIF gate fails closed on absent or malformed scan output", (t) => {
   t.after(() => rmSync(root, { recursive: true, force: true }));
   assert.throws(() => checkSarifDirectory(root), /No SARIF/);
 });
+
+test("SARIF resolves CodeQL extension rules and rejects conflicting or missing references", () => {
+  const data = report("8.0");
+  const run = data.runs[0];
+  run.tool.extensions = [{ name: "codeql/javascript-queries", rules: run.tool.driver.rules }];
+  run.tool.driver.rules = [];
+  run.results = [
+    { ruleId: "test/rule", rule: { id: "test/rule", index: 0, toolComponent: { index: 0 } } },
+  ];
+  assert.deepEqual(seriousFindings(data), ["test/rule"]);
+  run.results[0].rule.toolComponent = { name: "codeql/javascript-queries" };
+  assert.deepEqual(seriousFindings(data), ["test/rule"]);
+  run.results[0].rule.id = "different-rule";
+  assert.throws(() => seriousFindings(data), /identity/);
+  run.results[0].rule.toolComponent = { index: 7 };
+  assert.throws(() => seriousFindings(data), /unknown/);
+  run.results[0].rule.toolComponent = { index: "map" };
+  assert.throws(() => seriousFindings(data), /index/);
+  run.results[0].rule.toolComponent = { index: 0 };
+  run.results[0].rule.index = "map";
+  assert.throws(() => seriousFindings(data), /index/);
+});
