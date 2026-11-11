@@ -28,6 +28,7 @@ export class Terminals {
   token: string;
   onData: (id: string, data: string) => void;
   onExit: (id: string, exitCode: number) => void;
+  onInput?: (id: string, data: string) => void;
   constructor(options: {
     root: string;
     hookConfig: string;
@@ -35,6 +36,7 @@ export class Terminals {
     token: string;
     onData: (id: string, data: string) => void;
     onExit: (id: string, code: number) => void;
+    onInput?: (id: string, data: string) => void;
   }) {
     this.root = options.root;
     this.hookConfig = options.hookConfig;
@@ -42,6 +44,7 @@ export class Terminals {
     this.token = options.token;
     this.onData = options.onData;
     this.onExit = options.onExit;
+    this.onInput = options.onInput;
   }
   start(session: Session): boolean {
     if (this.closing) throw new Error("Workspace is shutting down.");
@@ -123,6 +126,7 @@ export class Terminals {
     if (typeof data !== "string" || data.length > 32768)
       throw new Error("Terminal input is too large.");
     record.process.write(data);
+    this.onInput?.(id, data);
   }
   resize(id: string, cols: number, rows: number): void {
     if (

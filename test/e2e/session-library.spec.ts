@@ -1,7 +1,7 @@
 import path from "node:path";
 import { test as base, expect } from "@playwright/test";
 import { projectRoot } from "../../src/server/app.ts";
-import { testApp, waitUntil } from "../helpers.ts";
+import { fixtureCli, testApp, waitUntil } from "../helpers.ts";
 
 const test = base.extend<{ app: Awaited<ReturnType<typeof testApp>> }>({
   // biome-ignore lint/correctness/noEmptyPattern: Playwright fixture signature.
@@ -133,4 +133,51 @@ test("switching and resizing restore a terminal border after its drawing command
     await page.getByRole("button", { name: "Open Other", exact: true }).click();
     await expect(page.locator(".xterm-accessibility-tree")).toContainText("WORKER_READY");
   }
+});
+
+test("terminal and dialog follow-ups handle earlier Claude results without clicking reviewed", async ({
+  page,
+  app,
+}) => {
+  const created = await app.request("/api/sessions", {
+    name: "Reply lifecycle",
+    mode: "claude",
+    cwd: projectRoot,
+    executable: fixtureCli(
+      app.stateDir,
+      path.join(projectRoot, "test/fixtures/claude-turn-worker.mjs"),
+    ),
+    attentionMode: "events",
+  });
+  expect(created.response.status).toBe(200);
+  await page.goto(app.url);
+  await expect(page.locator(".xterm-accessibility-tree")).toContainText("SIMULATED_CLAUDE_READY");
+  await page.locator(".xterm-helper-textarea").focus();
+  await page.keyboard.type("first question");
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".queue-card")).toContainText("Response 1: first question");
+  const first = app.workspace.queue()[0];
+  await page.locator(`[data-item="${first.id}"]`).click();
+  await expect(page.locator("#pending-count")).toHaveText("1");
+  await page.locator(".xterm-helper-textarea").focus();
+  await page.keyboard.type("follow up");
+  await expect(page.locator("#pending-count")).toHaveText("1");
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".queue-card")).toHaveCount(1);
+  await expect(page.locator(".queue-card")).toContainText("Response 2: follow up");
+  expect(app.workspace.item(first.id).status).toBe("resolved");
+  const second = app.workspace.queue()[0];
+  await page.locator("#reply-selected").click();
+  await page.getByLabel("Your message", { exact: true }).fill("third question");
+  await page.getByRole("button", { name: "Send to terminal", exact: true }).click();
+  await expect(page.locator("#reply-dialog")).not.toBeVisible();
+  await expect(page.locator(".queue-card")).toContainText("Response 3: third question");
+  await expect(page.locator(".queue-card")).toHaveCount(1);
+  expect(app.workspace.item(second.id).status).toBe("resolved");
+  await page.getByRole("button", { name: "Handled", exact: true }).click();
+  await expect(page.locator(".queue-card")).toHaveCount(2);
+  await page.reload();
+  expect(app.workspace.state.items.filter((item) => item.status === "resolved")).toHaveLength(2);
+  await page.getByRole("button", { name: /^Pending \d+$/ }).click();
+  await expect(page.locator(".queue-card")).toHaveCount(1);
 });

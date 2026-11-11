@@ -9,6 +9,7 @@ The [feature catalogue](docs/features.md) is the current/planned capability inve
 - Four areas: sessions, attention queue, coordinator, original terminal.
 - Separate questions, approvals, review results, errors, and uncertain activity suggestions. One session can produce several items.
 - User priority first, then oldest first. Opening an item never resolves it.
+- Submitting a Claude follow-up with connected hooks acknowledges earlier automatic response cards in that session. Handled history is retained; this is not permission approval or a correctness judgment.
 - Next, open, defer, review/done, and priority commands have visible, deterministic effects.
 - Any installed interactive CLI can run through an executable/argument profile. Agent integration is optional.
 - Explicit reply routing binds to a session ID and current process instance. Retrying the same delivery does not duplicate it.

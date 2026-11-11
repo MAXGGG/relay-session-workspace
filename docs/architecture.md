@@ -20,6 +20,8 @@ Version 0.3 adds `session-status.ts` for display states derived from live proces
 
 The UI renders state; it cannot decide an item is complete merely because someone opened its terminal. IDs and source request IDs keep session routing independent of mutable titles.
 
+Claude follow-ups acknowledge prior automatic `turn-result` review entries. The server captures eligible item IDs on an explicit Enter written to the PTY and consumes that candidate only on a `UserPromptSubmit` hook from the same live process within 30 seconds. Intervening input, process exit and expiry discard the candidate; results arriving after the captured input cannot be cleared. The core rechecks source/kind/manual classification before resolving. Results stay in Handled and can be reopened; permissions and errors remain separate. Input observation excludes the terminal emulator's device replies. Background prompt hooks alone do not acknowledge results: [Claude documents](https://code.claude.com/docs/en/hooks#userpromptsubmit) that these hooks can also fire for scheduled work and agent messages. This correlation is a bounded acknowledgement heuristic, not proof that Claude processed the submitted text or that its work is correct.
+
 Each transmitted snapshot has a per-server instance ID and increasing revision. The browser ignores older revisions for the same instance so a delayed HTTP reply cannot overwrite a newer WebSocket update. The regression reproduces a stale Running/Stopping display after a real process exits.
 
 ## Data

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## [0.5.2] - 2026-11-11
+
+- Submitted Claude follow-ups acknowledge earlier automatic response entries in the same session. Handled history is retained; viewing, background prompts, approvals, errors and manual classifications are preserved.
+- Pair actual input with a current-process prompt hook; discard stale, cancelled and expired candidates without clearing newer results.
 - Add feature inventory, roadmap, PR/issue intake, ownership and maintenance/release policies.
 - Enforce repository/workflow checks, PR metadata, security scans and aggregate CI/native gates.
 - Validate versioned notes and installer assets before publication.
@@ -28,6 +32,7 @@
 
 - Agent-independent profiles, terminals, durable attention and reviewed replies.
 
+[0.5.2]: https://github.com/MAXGGG/zyi/releases/tag/v0.5.2
 [0.5.1]: https://github.com/MAXGGG/zyi/releases/tag/v0.5.1
 [0.5.0]: https://github.com/MAXGGG/zyi/releases/tag/v0.5.0
 [0.4.0]: https://github.com/MAXGGG/zyi/releases/tag/v0.4.0

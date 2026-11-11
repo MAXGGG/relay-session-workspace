@@ -4,13 +4,13 @@ This is the inventory of current and proposed behavior. The [roadmap](roadmap.md
 
 **Shipped** = tagged preview; **Partial** = implementation with named gaps; **Planned** = accepted direction; **Exploring** = not committed. Priorities: P0 data loss/security, P1 daily reliability, P2 improvement, P3 exploration. Owner for unassigned work: @MAXGGG.
 
-## Current release: 0.5.1
+## Current release: 0.5.2
 
 | ID | Feature | Status | Evidence and limits |
 | --- | --- | --- | --- |
 | F01 | Shell, Claude, Codex and custom CLI profiles; original PTY | Shipped | [Profiles](../test/integration/profiles.test.ts), [lifecycle](../test/integration/lifecycle.test.ts). Local host only; cannot adopt arbitrary external terminals. |
 | F02 | Priority queue; next, defer, classify, resolve/reopen | Shipped | [Queue tests](../test/unit/attention.test.ts), [browser flow](../test/e2e/workspace.spec.ts). Opening never resolves an item; silence is a suggestion. |
-| F03 | Claude completion/question/permission hooks | Partial | [Bridge tests](../test/integration/claude-bridge.test.ts). Requires Claude profile and connected hooks; Shell launches do not install integration. Real Mac/Claude acceptance remains open. |
+| F03 | Claude completion/question/permission hooks | Partial | [Bridge tests](../test/integration/claude-bridge.test.ts), [follow-up flow](../test/e2e/session-library.spec.ts). Submitted follow-ups acknowledge earlier automatic response cards; background events alone preserve them. Requires Claude profile and connected hooks; Shell launches do not install integration. Real Mac/Claude acceptance remains open. |
 | F04 | Coordinator navigation, clarification and worker creation | Shipped | [Transport](../test/integration/coordinator-transport.test.ts), [management](../test/e2e/management.spec.ts). CLI account, bounded context, no autonomous approval. |
 | F05 | Reviewed replies and delivery receipts | Shipped | [Routing](../test/integration/attention-routing.test.ts). Explicit session/run binding; uncertain deliveries are not replayed. |
 | F06 | Groups, pins, order, search, notes, archive/restore/deletion | Shipped | [Management](../test/e2e/management.spec.ts). Automatic retirement only archives stopped sessions without pending work. |
