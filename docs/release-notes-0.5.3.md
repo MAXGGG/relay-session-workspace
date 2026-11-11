@@ -1,5 +1,6 @@
 Zyi 0.5.3 fixes accumulated Claude response cards and strengthens UI rendering and release validation.
 
+- Session state is now prominent: text/icon badges and colored edges distinguish working, input requests, approvals and review results. **Session open** means the process is alive with unknown activity; **Idle · ready** means a reported idle/finished turn with no pending item. Priority remains a separate badge; counts preserve outstanding work.
 - The Claude coordinator now requests structured action output. Malformed responses show a clear failure; no guessed action or automatic retry runs.
 - Ask the coordinator to manage templates, folder defaults, session forms, settings, history views, search, output exports, layout, details, notifications and desktop menu flows. It reuses existing forms and confirmations; preparing changes does not silently save them. See [coordinator capabilities](https://github.com/MAXGGG/zyi/blob/main/docs/coordinator.md).
 - **Handled** history stays within its panel, with 20 entries per page, Previous/Next controls and the most recently handled items first. No history is deleted. Pending and Deferred also scroll inside the panel instead of stretching the workspace.

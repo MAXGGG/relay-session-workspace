@@ -99,7 +99,7 @@ test("Claude hooks show work in progress, completion in the queue, and a visible
   await page.locator('[data-command="next task"]').click();
   await expect(page.locator("#focus-item")).toContainText("finished its turn");
   await page.getByRole("button", { name: "Mark reviewed", exact: true }).click();
-  await expect(page.locator("#terminal-status")).toHaveText("Ready for input");
+  await expect(page.locator("#terminal-status")).toHaveText("Idle · ready");
 });
 
 test("switching and resizing restore a terminal border after its drawing commands leave the output ring", async ({

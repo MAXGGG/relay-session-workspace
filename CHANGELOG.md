@@ -4,6 +4,7 @@
 
 ## [0.5.3] - 2026-11-11
 
+- Replace small session status dots/text with prominent text/icon badges and state-colored edges. Distinguish Working, Waiting for input, Approval needed, Ready to review, Idle and Session open; retain separate priority badges and pending counts. Match terminal/queue colors and respect reduced motion.
 - Request Claude's structured action schema and report invalid coordinator output without applying guessed actions or showing a raw JSON parser error.
 - Extend the coordinator to application workflows: templates, saved folders, session forms, settings, queue history, search, layout, output, details, notifications and fixed desktop menu actions. Reuse existing review/confirmation flows and preserve open drafts.
 - Keep the queue within the desktop window. Handled history has 20 entries per page, newest handled first, with all records retained and reopenable. Pending and Deferred scroll independently.
