@@ -1,5 +1,6 @@
 Zyi 0.5.3 fixes accumulated Claude response cards and strengthens UI rendering and release validation.
 
+- **Handled** history stays within its panel, with 20 entries per page, Previous/Next controls and the most recently handled items first. No history is deleted. Pending and Deferred also scroll inside the panel instead of stretching the workspace.
 - Submit a follow-up in the terminal or through **Reply…**: when connected Claude hooks report the prompt, earlier automatic response cards for that session move to **Handled**. The next response gets its own pending card. Handled entries remain available to reopen.
 - Viewing or typing an unsent draft leaves results pending. Background prompt events alone cannot acknowledge them. Errors, permission requests and manually classified items still need explicit handling. This acknowledgement does not certify correctness or grant permission.
 - Escape session/status/priority metadata, message roles and item IDs before using them in HTML. A browser regression verifies hostile snapshot metadata and model text remain literal instead of injecting markup.

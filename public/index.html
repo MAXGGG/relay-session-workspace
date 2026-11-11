@@ -39,7 +39,12 @@
         <button type="button" data-filter="resolved">Handled</button>
       </nav>
       <div id="queue" class="queue-list"></div>
-      <div class="queue-foot"><span>↑ Priority first</span><span>Then oldest first</span></div>
+      <nav id="history-pagination" class="history-pagination" aria-label="Handled history pages" hidden>
+        <button id="history-previous" type="button" aria-label="Previous handled page">← Previous</button>
+        <span id="history-range" role="status" aria-live="polite"></span>
+        <button id="history-next" type="button" aria-label="Next handled page">Next →</button>
+      </nav>
+      <div class="queue-foot"><span id="queue-order">↑ Priority first</span><span id="queue-retention">Then oldest first</span></div>
     </section>
     <hr class="splitter vertical" id="resize-attention" tabindex="0" aria-valuenow="40" aria-label="Resize attention panel" aria-orientation="vertical" title="Drag to resize attention. Arrow keys adjust; double-click resets." />
     <div class="workbench">
