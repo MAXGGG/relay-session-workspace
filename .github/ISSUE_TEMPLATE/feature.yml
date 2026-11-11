@@ -1,0 +1,22 @@
+name: Feature request
+description: Propose an outcome and acceptance criteria.
+title: "feat: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: "Current workflow/workaround; link a feature ID or issue."
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome and acceptance criteria
+    validations:
+      required: true
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: Alternatives and constraints
+      description: "Platforms, agents, data/security implications and exclusions."

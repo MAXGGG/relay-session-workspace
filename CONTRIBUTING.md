@@ -1,19 +1,48 @@
-# Contributing
+# Contributing to Zyi
 
-Read [PROJECT.md](PROJECT.md) for the product scope and [AGENTS.md](AGENTS.md) for implementation boundaries. Keep changes small enough to review as one behavior change.
+Read [PROJECT.md](PROJECT.md), [AGENTS.md](AGENTS.md), [features](docs/features.md) and [architecture](docs/architecture.md). Zyi remains a desktop preview.
 
-## Setup and validation
+## Setup
 
-Use Node 24+, `npm ci`, and `npm run setup:browser`. Start locally with `npm run dev`. Run `npm run verify` before submitting changes. The same command runs in the Windows/Ubuntu CI matrix. Preserve `package-lock.json`; update it deliberately when changing dependencies.
+Use Node 24 LTS (.nvmrc), then:
+```sh
+npm ci
+npm run setup:browser
+npm run dev
+```
+Build native packages on their target OS/architecture. Commit deliberate lockfile changes. Review native install-script allowances rather than enabling all scripts.
 
-For npm versions with install-script approval, package.json allows only the pinned node-pty version's native setup scripts. Review that allowance when updating the dependency; do not enable arbitrary install scripts globally.
+## Intake
 
-For a bug, reproduce the observable failure with a regression test, implement the fix, and run the relevant test layer. Run the full verification command before completion. UI changes need a browser flow and visual inspection; hook changes need synthetic event coverage and a manual check on a real Claude installation when possible. Clearly state when the real-Claude check was unavailable.
+1. Check issues and feature IDs. A bug needs reproduction; a feature needs an outcome and acceptance criteria. Small maintenance/docs fixes can go straight to a PR.
+2. Use a branch such as fix/hook-health. One reviewable outcome per PR; separate unrelated cleanup/dependency updates.
+3. Changes to architecture, persistence, process ownership or trust boundaries need a short [decision](docs/decisions/README.md).
+4. Open a draft while scope/evidence is incomplete. Fill the template before requesting review.
 
-## Work with an AI coding agent
+Title: `type(optional-scope): description`. Types: feat, fix, docs, refactor, test, build, ci, chore, perf, revert. Example: `fix(claude): surface disconnected hooks`.
 
-Give the agent a concrete acceptance condition, such as: “Add a waiting-item filter; opening a filtered item must not resolve it; include the browser test.” Ask it to read AGENTS.md, inspect existing tests, implement the smallest coherent change, and run verification. Review the resulting diff and observed behavior. Update the architecture/product notes when a boundary changes rather than growing root instruction files with task history.
+The **PR intake** check validates title and substantive Problem, Changes, Validation, Risk and recovery, and Related work sections. Comments/placeholders do not count. Dependabot keeps its generated body but still needs a valid title and all technical checks. Metadata checks do not establish correctness.
 
-## Pull requests
+## Definition of done
 
-Describe the user-visible problem, resulting behavior, and validation. Flag any untested platform or external integration. Do not include `.relay/`, access tokens, real session transcripts, `node_modules`, or generated reports. Never weaken a test gate to make an unrelated failure disappear. Dependency upgrades touching `node-pty` must pass the natural-exit and explicit-stop subprocess tests; see the Windows compatibility note in docs/architecture.md.
+- Explain the trigger, previous behavior, result and scope; link an issue/feature ID or explain a small standalone change.
+- Reproduce bugs with behavioral tests when practical. Persistence changes include migration/backup evidence. Use temporary data and deterministic fixtures, not personal history or default paid calls.
+- Run npm run verify. Record exact commands/results and unavailable checks; distinguish simulation from live integration.
+- UI changes need screenshots or recorded visual inspection. PTY/desktop changes need native packaged/installed lifecycle evidence.
+- Preserve explicit input targets and approval boundaries. No tokens, transcripts, local .relay state or credentials in the diff.
+- Update docs, feature status and Unreleased changelog when behavior changes.
+- Explain risk, data compatibility and rollback. Resolve review threads; never weaken a gate to hide a failure.
+
+## Review and merge
+
+CODEOWNERS names @MAXGGG. External changes need maintainer review. Seek a second reviewer for sensitive changes when available. A sole maintainer cannot approve their own PR; the baseline therefore requires PRs and checks with zero mandatory approvals. Own changes need written self-review and evidence. Raise the rule to one approval when another active maintainer joins.
+
+Required checks: **PR intake**, **CI required**, **Desktop required**, **Security required**. Merge only on the current revision with up-to-date checks and resolved conversations. Squash merge and delete the feature branch. No routine direct/force pushes to main. Emergency admin bypass requires a recorded reason and follow-up.
+
+Review behavior, failure recovery, ownership, tests capable of catching the bug, OS/agent claims and supply-chain changes. AI-authored code meets the same bar; the human submitter owns the result.
+
+## Maintenance and AI
+
+Dependabot opens bounded weekly updates. Keep native runtime/PTY/Electron changes separate from routine tooling. Do not run audit fix --force without reviewing version changes. See [security](SECURITY.md), [maintenance](docs/maintenance.md) and [releases](docs/releases.md).
+
+Give AI agents acceptance criteria; have them read AGENTS.md, reproduce, implement, validate and report limits. Review the diff. Stable constraints belong in root instructions, decisions in ADRs, and task history in issues/PRs.

@@ -1,6 +1,7 @@
 # Working on Zyi
 
 Read PROJECT.md for product boundaries, docs/architecture.md for ownership, and docs/testing.md for validation.
+Read CONTRIBUTING.md for PR acceptance, docs/features.md for status, and docs/roadmap.md for priorities. Keep status/evidence current; do not equate synthetic tests with live-agent acceptance. Use the PR workflow; maintenance-only changes do not require an installer release.
 
 ## Commands
 - Node 24+, `npm ci`, `npm start` (local UI).

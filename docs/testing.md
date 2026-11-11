@@ -1,5 +1,15 @@
 # Testing and continued development
 
+## Maintenance gates
+
+In addition to product tests below, `npm run verify` includes tooling policy tests and `npm run check:repo` (YAML parsing, action pins, required-check names, local documentation links and version consistency). CI runs actionlint against workflow syntax. PR metadata has a separate **PR intake** check so description edits do not rerun every native build. `npm run audit:deps` checks the complete tree for high/critical advisories; CodeQL and dependency scans also run weekly. Moderate findings remain visible and tracked in SECURITY.md.
+
+**CI required**, **Desktop required** and **Security required** fail if an expected upstream job fails or is skipped. GitHub's main ruleset requires those plus **PR intake**. These checks must pass on the current PR revision; a green local test is not a substitute. Tagged publication additionally calls security validation and checks release metadata/assets. See [releases](releases.md).
+
+Tooling policy tests cover incomplete PR descriptions, untrusted metadata, version mismatches and incomplete/empty release assets. They do not change domain coverage thresholds. Workflow syntax is validated by actionlint locally or by the Repository policy job.
+
+## Product validation
+
 Version 0.5.1 has 21 unit, 33 integration, 20 browser and 2 desktop acceptance tests (76 on Windows; the Windows-only shim test is skipped on other platforms). `npm run verify` covers the first three layers; build the desktop before `npm run test:desktop`. CI uses deterministic planners and subprocess fixtures; no model calls are made. Earlier management, coordinator, routing and resizing coverage remains in place.
 
 New regressions cover empty Claude completions, actual hook-bridge delivery of long Unicode responses, saved group/template persistence and independent sessions, native folder-picker IPC, working/priority visibility, and a TUI input border whose original drawing commands have left raw transcript retention. Browser acceptance switches that terminal repeatedly and resizes it. Core coverage is 100% lines, 98.43% branches and 97.10% functions. This does not substitute for real Claude acceptance on the user's machine.

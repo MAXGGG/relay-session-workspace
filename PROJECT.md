@@ -4,6 +4,8 @@ Zyi helps one person handle many independent CLI sessions: Claude, Codex, shells
 
 ## Working release acceptance
 
+The [feature catalogue](docs/features.md) is the current/planned capability inventory; the [roadmap](docs/roadmap.md) defines next milestones. [Maintenance](docs/maintenance.md) defines ownership and stable-release readiness.
+
 - Four areas: sessions, attention queue, coordinator, original terminal.
 - Separate questions, approvals, review results, errors, and uncertain activity suggestions. One session can produce several items.
 - User priority first, then oldest first. Opening an item never resolves it.

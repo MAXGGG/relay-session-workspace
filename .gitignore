@@ -7,6 +7,7 @@ test-artifacts/
 playwright-report/
 test-results/
 coverage/
+codeql-results/
 .env
 .env.*
 !.env.example
