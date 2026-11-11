@@ -34,7 +34,9 @@ async function setup(page: Page) {
     await page
       .getByLabel("Coordinator command")
       .fill(`Requested workflow ${next[0].flow ?? next[0].kind}`);
+    const response = page.waitForResponse((result) => result.url().endsWith("/api/chat"));
     await page.getByRole("button", { name: "Send command" }).click();
+    await response;
     await expect(page.locator("#chat-send")).toBeEnabled();
   };
   return { app, first, second, ask };
@@ -61,6 +63,7 @@ test("coordinator prepares settings, folder defaults and templates through the e
     await expect(page.locator("#settings-form [name=coordinatorModel]")).toBeVisible();
     expect(app.workspace.state.settings?.retireAfterDays).toBe(0);
     await page.getByRole("button", { name: "Save settings" }).click();
+    await expect(page.locator("#settings-dialog")).toBeHidden();
     expect(app.workspace.state.settings?.retireAfterDays).toBe(14);
     expect(app.workspace.state.settings?.coordinator?.model).toBe("example-model");
     await ask([
@@ -74,7 +77,9 @@ test("coordinator prepares settings, folder defaults and templates through the e
       },
     ]);
     await page.getByRole("button", { name: "Save group folder" }).click();
-    expect(app.workspace.state.groups).toEqual([{ name: "Work", cwd: app.stateDir }]);
+    await expect
+      .poll(() => app.workspace.state.groups)
+      .toEqual([{ name: "Work", cwd: app.stateDir }]);
     await page.getByLabel("Close dialog", { exact: true }).click();
     await ask([
       {
@@ -92,6 +97,7 @@ test("coordinator prepares settings, folder defaults and templates through the e
       },
     ]);
     await page.getByRole("button", { name: "Save template", exact: true }).click();
+    await expect.poll(() => app.workspace.state.templates?.[0]?.name).toBe("Fixture template");
     const template = app.workspace.state.templates?.[0];
     expect(template?.name).toBe("Fixture template");
     await page.getByLabel("Close dialog", { exact: true }).click();
@@ -204,7 +210,7 @@ test("coordinator reaches history, search, layout, output and deletion without c
       await dialog.accept();
     });
     await ask([{ kind: "ui", flow: "delete-session", sessionId: first.id }]);
-    expect(app.workspace.state.sessions.map((s) => s.id)).toEqual([second.id]);
+    await expect.poll(() => app.workspace.state.sessions.map((s) => s.id)).toEqual([second.id]);
   } finally {
     await app.cleanup();
   }
