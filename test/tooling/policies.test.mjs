@@ -28,6 +28,13 @@ test("PR intake accepts substantive descriptions and rejects placeholders/commen
   );
   assert.ok(validatePullRequest({ title: "update", body }).some((e) => e.includes("title")));
   assert.equal(
+    validatePullRequest({
+      title: "docs: explain launch configuration",
+      body: `<!<!-- hidden -->-->${body}-->`,
+    }).length,
+    5,
+  );
+  assert.equal(
     validatePullRequest({ title: "docs: explain all supported launch options", body: "" }).length,
     5,
   );

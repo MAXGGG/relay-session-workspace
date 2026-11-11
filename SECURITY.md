@@ -13,6 +13,7 @@ Sensitive surfaces: terminal routing, HTTP/WebSocket tokens/origins, coordinator
 ## Build integrity
 
 CI audits the complete dependency tree, including Electron/build tools, runs CodeQL, pins actions by commit and gives PR jobs read-only permissions without signing secrets. Scheduled scans catch new advisories. Runtime/PTY upgrades need native packaged acceptance.
+The security gate inspects generated SARIF and rejects high/critical security scores (7 or greater), error-level findings, and missing/malformed scan output. A successful scanner invocation alone is not a passing security gate. This evaluates local results and also works for fork PRs without reading repository alerts through an admin API.
 
 On 2026-11-10 npm audit reports six moderate tree findings from minimatch (GHSA-g3hv-75wg-m249) in electron-builder tooling, zero high/critical. Owner: @MAXGGG; review by 2026-12-10. Test a compatible upstream update on all native targets; do not blindly accept the suggested forced packager downgrade. This is tracked exposure, not suppression. Production-only dependencies report no findings, but that excludes Electron, a dev dependency used at runtime.
 

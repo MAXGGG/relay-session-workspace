@@ -12,7 +12,12 @@ export function validatePullRequest(pr) {
       "Use type(scope): description with a meaningful title (6–120 characters after the prefix).",
     );
   if (pr.user?.login === "dependabot[bot]") return errors;
-  const body = (pr.body ?? "").replace(/<!--[\s\S]*?-->/g, "");
+  let body = pr.body ?? "";
+  let previous;
+  do {
+    previous = body;
+    body = body.replace(/<!--[\s\S]*?(?:-->|$)/g, "");
+  } while (body !== previous);
   for (const heading of ["Problem", "Changes", "Validation", "Risk and recovery", "Related work"]) {
     const sections = [...body.matchAll(/^## ([^\r\n]+)\r?\n([\s\S]*?)(?=^## |$(?![\s\S]))/gm)];
     const content =

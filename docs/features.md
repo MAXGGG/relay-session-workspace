@@ -22,6 +22,8 @@ This is the inventory of current and proposed behavior. The [roadmap](roadmap.md
 
 ## Accepted work
 
+F18 is implemented by the maintenance foundation PR and maintained on main independently of installer releases. Other entries below remain planned until their acceptance evidence is recorded.
+
 | ID | Priority | Feature / problem | Acceptance criteria |
 | --- | --- | --- | --- |
 | F12 | P1 | Recurring Mac folder denial | Sanitized evidence and exact versions; distinguish same-run failures from upgrade permission loss; actionable checks; real Mac reproduction before claiming a fix. |
