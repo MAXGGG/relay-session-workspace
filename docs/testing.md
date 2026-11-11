@@ -10,7 +10,9 @@ Tooling policy tests cover incomplete PR descriptions, untrusted metadata, versi
 
 ## Product validation
 
-Version 0.5.1 has 21 unit, 33 integration, 20 browser and 2 desktop acceptance tests (76 on Windows; the Windows-only shim test is skipped on other platforms). `npm run verify` covers the first three layers; build the desktop before `npm run test:desktop`. CI uses deterministic planners and subprocess fixtures; no model calls are made. Earlier management, coordinator, routing and resizing coverage remains in place.
+Version 0.5.2 has 22 unit, 33 integration, 21 browser and 2 desktop acceptance tests (78 on Windows; the Windows-only shim test is skipped on other platforms), plus eight tooling-policy tests. `npm run verify` covers the first three layers and tooling; build the desktop before `npm run test:desktop`. CI uses deterministic planners and subprocess fixtures; no model calls are made. Earlier management, coordinator, routing and resizing coverage remains in place.
+
+The 0.5.2 follow-up regression reproduces accumulated Claude review cards. A real PTY fixture invokes the shipped bridge for consecutive turns, exercises terminal typing and the Reply dialog, and verifies only the latest response remains pending while Handled history survives reload. Unit/integration cases preserve other sessions, errors, approvals, manual classifications and newer results, and reject background-only, cancelled, expired and stale-process acknowledgement. This is deterministic integration evidence, not a live Claude/macOS acceptance claim.
 
 New regressions cover empty Claude completions, actual hook-bridge delivery of long Unicode responses, saved group/template persistence and independent sessions, native folder-picker IPC, working/priority visibility, and a TUI input border whose original drawing commands have left raw transcript retention. Browser acceptance switches that terminal repeatedly and resizes it. Core coverage is 100% lines, 98.43% branches and 97.10% functions. This does not substitute for real Claude acceptance on the user's machine.
 

@@ -24,7 +24,11 @@ test("turn question, user answer, and review are separate attention transitions"
   assert.equal(session.status, "working");
   emit({ hook_event_name: "Stop", message: "The change is ready." });
   emit({ hook_event_name: "UserPromptSubmit" });
-  assert.equal(w.queue()[0].kind, "review", "new prompts do not silently accept results");
+  assert.equal(
+    w.queue()[0].kind,
+    "review",
+    "hooks without observed user submission preserve results",
+  );
   emit({ hook_event_name: "Stop", last_assistant_message: "" });
   assert.equal(w.queue().length, 2);
 });
@@ -45,6 +49,58 @@ test("completion without message text and idle notifications still request atten
   assert.equal(w.queue()[0].confidence, "suggested");
   emit({ hook_event_name: "UserPromptSubmit" });
   assert.equal(w.queue().length, 0);
+});
+
+test("a submitted reply acknowledges only the captured automatic results in its session", () => {
+  const { w, session, emit } = fixture();
+  emit({ hook_event_name: "Stop", message: "First result" });
+  const first = w.queue()[0];
+  emit({ hook_event_name: "Stop", message: "Older deferred result" });
+  const deferred = w.queue().find((item) => item.id !== first.id);
+  assert.ok(deferred);
+  w.snooze(deferred.id);
+  emit({ hook_event_name: "Stop", message: "Keep this as a manual decision" });
+  const manual = w.queue().find((item) => item.id !== first.id);
+  assert.ok(manual);
+  w.classify(manual.id, "review");
+  emit({ hook_event_name: "PermissionRequest", tool_name: "Bash" });
+  emit({ hook_event_name: "StopFailure", message: "Unresolved failure" });
+  const other = w.addSession({ name: "Other", project: "repo", cwd: ".", mode: "claude" });
+  ingestEvent(w, other.id, { hook_event_name: "Stop", message: "Other session result" });
+  const captured = w.state.items.map((item) => item.id);
+  emit({ hook_event_name: "Stop", message: "New result after input" });
+  const submit = { hook_event_name: "UserPromptSubmit", eventId: "user-reply" };
+  ingestEvent(w, session.id, submit, captured);
+  assert.equal(first.status, "resolved");
+  assert.equal(deferred.status, "resolved");
+  assert.equal(deferred.snoozedUntil, undefined);
+  assert.ok(first.resolvedAt);
+  assert.equal(manual.status, "pending");
+  assert.deepEqual(
+    w
+      .queue()
+      .map((item) => item.title)
+      .sort(),
+    [
+      "Keep this as a manual decision",
+      "New result after input",
+      "Other session result",
+      "Permission requested for Bash. Open the terminal to decide.",
+      "Unresolved failure",
+    ].sort(),
+  );
+  ingestEvent(
+    w,
+    session.id,
+    submit,
+    w.queue().map((item) => item.id),
+  );
+  assert.ok(
+    w.queue().some((item) => item.title === "New result after input"),
+    "duplicate hooks cannot acknowledge newer results",
+  );
+  w.reopen(first.id);
+  assert.equal(first.status, "pending", "handled history remains recoverable");
 });
 
 test("structured questions resolve only after the question tool completes", () => {

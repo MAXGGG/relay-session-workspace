@@ -9,7 +9,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { ingestSessionEvent, QuietMonitor } from "../core/attention.ts";
 import { coordinate } from "../core/coordinator.ts";
 import { seedDemo } from "../core/demo.ts";
-import { ingestEvent } from "../core/events.ts";
+import { ingestEvent, pendingClaudeReviews } from "../core/events.ts";
 import { sessionStatus } from "../core/session-status.ts";
 import type { CoordinatorSettings, SessionEvent, SessionMode, WorkerEvent } from "../core/types.ts";
 import { validPriority, Workspace } from "../core/workspace.ts";
@@ -96,6 +96,7 @@ export async function createApp(
       };
     };
     const intentionalStops = new Set<string>();
+    const submittedReviews = new Map<string, { runId: string; at: number; ids: string[] }>();
     const monitor = new QuietMonitor();
     let activityDirty = false;
     const send = (ws: WebSocket, value: unknown) => {
@@ -112,6 +113,18 @@ export async function createApp(
       hookConfig,
       endpoint: "",
       token,
+      onInput: (sessionId, data) => {
+        // Enter is only a candidate: raw typing/paste, viewing, device replies,
+        // and background hooks must not mark results reviewed on their own.
+        submittedReviews.delete(sessionId);
+        const record = terminals.records.get(sessionId);
+        if (record && (data === "\r" || data === "\n"))
+          submittedReviews.set(sessionId, {
+            runId: record.runId,
+            at: workspace.now(),
+            ids: pendingClaudeReviews(workspace, sessionId).map((item) => item.id),
+          });
+      },
       onData: (sessionId, data) => {
         transcripts.append(sessionId, data);
         monitor.observe(workspace, sessionId, stripVTControlCharacters(data));
@@ -126,6 +139,7 @@ export async function createApp(
             });
       },
       onExit: (sessionId, code) => {
+        submittedReviews.delete(sessionId);
         const session = workspace.session(sessionId);
         const intentional = intentionalStops.delete(sessionId);
         session.status = code === 0 || intentional ? "stopped" : "error";
@@ -719,8 +733,22 @@ export async function createApp(
                   ))
               )
                 throw new Error("Invalid question data.");
-              ingestEvent(workspace, sessionId, event);
               const record = terminals.records.get(sessionId);
+              let reviewIds: string[] = [];
+              if (event.hook_event_name === "UserPromptSubmit") {
+                const submitted = submittedReviews.get(sessionId);
+                submittedReviews.delete(sessionId);
+                if (
+                  record &&
+                  !record.stopping &&
+                  submitted &&
+                  submitted.runId === record.runId &&
+                  body.runId === record.runId &&
+                  workspace.now() - submitted.at <= 30000
+                )
+                  reviewIds = submitted.ids;
+              }
+              ingestEvent(workspace, sessionId, event, reviewIds);
               if (record) record.lastHook = { event: event.hook_event_name, at: workspace.now() };
               break;
             }

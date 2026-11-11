@@ -1,7 +1,23 @@
 import type { WorkerEvent } from "./types.ts";
 import type { Workspace } from "./workspace.ts";
 
-export function ingestEvent(workspace: Workspace, sessionId: string, event: WorkerEvent): void {
+export function pendingClaudeReviews(workspace: Workspace, sessionId: string) {
+  return workspace.state.items.filter(
+    (item) =>
+      item.sessionId === sessionId &&
+      item.status !== "resolved" &&
+      item.source === "turn-result" &&
+      item.kind === "review" &&
+      item.confidence !== "manual",
+  );
+}
+
+export function ingestEvent(
+  workspace: Workspace,
+  sessionId: string,
+  event: WorkerEvent,
+  submittedReviewIds: readonly string[] = [],
+): void {
   const session = workspace.session(sessionId);
   if (event.eventId && !workspace.recordEvent(`${sessionId}:${event.eventId}`)) return;
   if (event.session_id) {
@@ -46,6 +62,10 @@ export function ingestEvent(workspace: Workspace, sessionId: string, event: Work
       session.lastActivityAt = workspace.now();
       resolveQuestions("turn-question");
       resolveQuestions("idle-prompt");
+      // A follow-up acknowledges earlier responses, not approval requests or
+      // correctness. The server supplies only IDs captured at explicit input.
+      for (const item of pendingClaudeReviews(workspace, sessionId))
+        if (submittedReviewIds.includes(item.id)) workspace.resolve(item.id);
       break;
     case "PreToolUse":
       if (event.tool_name === "AskUserQuestion") {

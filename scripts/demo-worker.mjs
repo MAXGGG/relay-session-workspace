@@ -23,6 +23,7 @@ const emit = async (event) => {
       },
       body: JSON.stringify({
         relaySessionId: process.env.RELAY_SESSION_ID,
+        runId: process.env.RELAY_RUN_ID,
         event: { ...event, eventId: randomUUID() },
       }),
     });
