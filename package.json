@@ -34,7 +34,7 @@
     "@xterm/headless": "6.0.0",
     "@xterm/xterm": "6.0.0",
     "node-pty": "1.2.0-beta.18",
-    "ws": "8.22.1"
+    "ws": "8.22.2"
   },
   "engines": {
     "node": ">=24"
